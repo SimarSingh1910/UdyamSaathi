@@ -53,7 +53,7 @@ npm test
 
 ## LLM
 
-Set `LLM_PROVIDER` (gemini, groq, openai or anthropic) and `LLM_API_KEY` in `.env.local`. Without a key everything still works on rules.
+Set `LLM_PROVIDER` (gemini, groq, openai or anthropic) and `LLM_API_KEY` in `.env.local`. Without a key everything still works on rules. Open `/api/llm-status` to check the key and model are working.
 
 ## Data
 

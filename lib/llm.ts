@@ -7,7 +7,7 @@ export type Provider = "gemini" | "groq" | "openai" | "anthropic";
 
 const DEFAULT_MODELS: Record<Provider, string> = {
   gemini: "gemini-2.5-flash",
-  groq: "llama-3.3-70b-versatile",
+  groq: "openai/gpt-oss-120b",
   openai: "gpt-4o-mini",
   anthropic: "claude-haiku-4-5",
 };
@@ -20,6 +20,22 @@ export function llmConfig(): { provider: Provider; key: string; model: string } 
 }
 
 export const llmEnabled = () => llmConfig() !== null;
+
+/** Model chosen at runtime when the configured one is not available to this key. */
+let resolvedModel: string | null = null;
+/** Last failure, for the status endpoint. */
+export let lastError: string | null = null;
+export const activeModel = () => resolvedModel ?? llmConfig()?.model ?? null;
+
+const PREFERRED = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "gpt-4o-mini"];
+
+async function pickAvailableModel(base: string, key: string, signal: AbortSignal): Promise<string | null> {
+  const res = await fetch(`${base}/models`, { headers: { authorization: `Bearer ${key}` }, signal });
+  if (!res.ok) return null;
+  const ids: string[] = ((await res.json())?.data ?? []).map((m: { id: string }) => m.id);
+  const chat = ids.filter((id) => !/whisper|tts|orpheus|guard|safeguard|embed/i.test(id));
+  return PREFERRED.find((m) => chat.includes(m)) ?? chat[0] ?? null;
+}
 
 interface CompleteArgs {
   system: string;
@@ -54,32 +70,42 @@ export async function complete(args: CompleteArgs): Promise<string | null> {
           }),
         },
       );
-      if (!res.ok) throw new Error(`gemini ${res.status}`);
+      if (!res.ok) throw new Error(`gemini ${res.status} ${(await res.text()).slice(0, 200)}`);
       const data = await res.json();
       return data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? null;
     }
 
     if (cfg.provider === "openai" || cfg.provider === "groq") {
       // Groq serves an OpenAI-compatible API.
-      const url =
-        cfg.provider === "groq"
-          ? "https://api.groq.com/openai/v1/chat/completions"
-          : "https://api.openai.com/v1/chat/completions";
-      const res = await fetch(url, {
-        method: "POST",
-        signal: ctrl.signal,
-        headers: { "content-type": "application/json", authorization: `Bearer ${cfg.key}` },
-        body: JSON.stringify({
-          model: cfg.model,
-          temperature: 0.2,
-          messages: [
-            { role: "system", content: args.system },
-            { role: "user", content: args.user },
-          ],
-          ...(args.json ? { response_format: { type: "json_object" } } : {}),
-        }),
-      });
-      if (!res.ok) throw new Error(`${cfg.provider} ${res.status}`);
+      const base = cfg.provider === "groq" ? "https://api.groq.com/openai/v1" : "https://api.openai.com/v1";
+      const call = (model: string) =>
+        fetch(`${base}/chat/completions`, {
+          method: "POST",
+          signal: ctrl.signal,
+          headers: { "content-type": "application/json", authorization: `Bearer ${cfg.key}` },
+          body: JSON.stringify({
+            model,
+            temperature: 0.2,
+            // gpt-oss is a reasoning model; keep it fast for a chat UI.
+            ...(model.includes("gpt-oss") ? { reasoning_effort: "low" } : {}),
+            messages: [
+              { role: "system", content: args.system },
+              { role: "user", content: args.user },
+            ],
+            ...(args.json ? { response_format: { type: "json_object" } } : {}),
+          }),
+        });
+
+      let res = await call(resolvedModel ?? cfg.model);
+      // Model retired or not enabled for this key: pick one the key can use and retry once.
+      if (res.status === 404 && !resolvedModel) {
+        resolvedModel = await pickAvailableModel(base, cfg.key, ctrl.signal);
+        if (resolvedModel) {
+          console.info(`[llm] ${cfg.model} unavailable, using ${resolvedModel}`);
+          res = await call(resolvedModel);
+        }
+      }
+      if (!res.ok) throw new Error(`${cfg.provider} ${res.status} ${(await res.text()).slice(0, 200)}`);
       const data = await res.json();
       return data?.choices?.[0]?.message?.content ?? null;
     }
@@ -100,11 +126,12 @@ export async function complete(args: CompleteArgs): Promise<string | null> {
         messages: [{ role: "user", content: args.user }],
       }),
     });
-    if (!res.ok) throw new Error(`anthropic ${res.status}`);
+    if (!res.ok) throw new Error(`anthropic ${res.status} ${(await res.text()).slice(0, 200)}`);
     const data = await res.json();
     return data?.content?.map((c: { text?: string }) => c.text ?? "").join("") ?? null;
   } catch (err) {
-    console.warn(`[llm] ${cfg.provider} call failed: ${(err as Error).message}`);
+    lastError = (err as Error).message;
+    console.warn(`[llm] ${cfg.provider} call failed: ${lastError}`);
     return null;
   } finally {
     clearTimeout(timer);
