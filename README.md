@@ -26,14 +26,34 @@ npm run dev        # http://localhost:3000
 npm test
 ```
 
-## API (so far)
+## Screens
+
+| Route | What the owner does |
+| --- | --- |
+| `/start` | Chat with the advisor (English or Hindi), get a bundle, tune it on the quote screen, finish KYC, place the order |
+| `/track/:orderId` | Follow installation and activation without calling support |
+
+## API
 
 | Method | Route | What it does |
 | --- | --- | --- |
+| POST | `/api/advisor/parse` | Understands a free-text description of the business (LLM, with a keyword fallback that also handles Hindi) |
+| POST | `/api/advisor/recommend` | Recommends a bundle with a reason per product, prices it and writes a plain-language pitch |
 | GET | `/api/catalogue` | Product catalogue, optionally with eligibility for a business profile |
 | POST | `/api/quote` | Monthly and one-time price for a bundle, with eligibility and dependency checks |
+| POST | `/api/kyc/verify` | Checks OCR text from the 4 KYC documents against each other and the registries (needs consent) |
 | GET | `/api/lookup/gstin/:gstin` | Mock GSTIN lookup (format, checksum and registry status) |
 | GET | `/api/lookup/udyam/:udyam` | Mock Udyam lookup |
+
+## How the pieces fit
+
+- **Advisor**: recommendations come from deterministic rules grounded in what the 368 activated leads bought per segment, so the same answers always give the same bundle. The LLM only does what it is good at: understanding free text and explaining the bundle in the owner's language. Prices always come from the quote engine, never from the model.
+- **Smart KYC**: documents are read on the phone with tesseract.js (engine and language data are self-hosted). Only the extracted text goes to the server, where it is matched against the GST and Udyam registries and across documents. On the 12 specimen applicants it catches a cancelled GSTIN, unreadable photos, a missing Udyam certificate, a missing Udyam number, GSTINs that fail the checksum, an edited legal name and an address proof older than 90 days.
+- **Tracker**: the timeline is derived from each product's typical install days. A demo switch runs one day every 5 seconds.
+
+## LLM
+
+Set `LLM_PROVIDER` (gemini, openai or anthropic) and `LLM_API_KEY` in `.env.local`. Without a key everything still works on rules.
 
 ## Data
 

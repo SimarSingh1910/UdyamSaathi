@@ -1,7 +1,9 @@
+import Link from "next/link";
+
 const steps = [
   {
     title: "Tell us about your business",
-    body: "Answer a few questions in your language. Our advisor recommends a bundle and explains why.",
+    body: "Answer a few questions in English or Hindi. Our advisor recommends a bundle and explains why.",
   },
   {
     title: "See one clear monthly price",
@@ -9,7 +11,7 @@ const steps = [
   },
   {
     title: "Finish KYC in minutes",
-    body: "We fetch your GST and Udyam details for you. Upload only what we cannot fetch.",
+    body: "We read your documents on your phone and check them against GST and Udyam records instantly.",
   },
   {
     title: "Track your order",
@@ -26,6 +28,10 @@ export default function Home() {
         Internet, business SIMs, WhatsApp, cloud email, security and CCTV: one bundle, one bill,
         one support number.
       </p>
+
+      <Link href="/start" className="btn btn-block">
+        Start now · अभी शुरू करें
+      </Link>
 
       {steps.map((s, i) => (
         <section className="card step" key={s.title}>
