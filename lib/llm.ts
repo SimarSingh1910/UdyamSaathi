@@ -1,12 +1,13 @@
 /**
- * Thin, provider-agnostic LLM client. Set LLM_PROVIDER (gemini | openai | anthropic)
+ * Thin, provider-agnostic LLM client. Set LLM_PROVIDER (gemini | groq | openai | anthropic)
  * and LLM_API_KEY. With no key the app still works: callers fall back to rules.
  */
 
-export type Provider = "gemini" | "openai" | "anthropic";
+export type Provider = "gemini" | "groq" | "openai" | "anthropic";
 
 const DEFAULT_MODELS: Record<Provider, string> = {
   gemini: "gemini-2.5-flash",
+  groq: "llama-3.3-70b-versatile",
   openai: "gpt-4o-mini",
   anthropic: "claude-haiku-4-5",
 };
@@ -58,8 +59,13 @@ export async function complete(args: CompleteArgs): Promise<string | null> {
       return data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? null;
     }
 
-    if (cfg.provider === "openai") {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    if (cfg.provider === "openai" || cfg.provider === "groq") {
+      // Groq serves an OpenAI-compatible API.
+      const url =
+        cfg.provider === "groq"
+          ? "https://api.groq.com/openai/v1/chat/completions"
+          : "https://api.openai.com/v1/chat/completions";
+      const res = await fetch(url, {
         method: "POST",
         signal: ctrl.signal,
         headers: { "content-type": "application/json", authorization: `Bearer ${cfg.key}` },
@@ -73,7 +79,7 @@ export async function complete(args: CompleteArgs): Promise<string | null> {
           ...(args.json ? { response_format: { type: "json_object" } } : {}),
         }),
       });
-      if (!res.ok) throw new Error(`openai ${res.status}`);
+      if (!res.ok) throw new Error(`${cfg.provider} ${res.status}`);
       const data = await res.json();
       return data?.choices?.[0]?.message?.content ?? null;
     }
