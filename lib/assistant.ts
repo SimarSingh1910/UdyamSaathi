@@ -1,7 +1,8 @@
 import { FAQ, catalogueBrief, type ChatTurn } from "./advisor-chat";
 import type { PartialAnswers } from "./advisor-parse";
 import { ACTION_IDS, GENERIC_HELP, appGuide, isActionId, matchHowTo, screenName, type ActionId, type GuideLabels, type Screen } from "./app-guide";
-import { getCatalogue } from "./catalogue";
+import { getCatalogue, type SegmentCode } from "./catalogue";
+import { SEGMENT_LABELS, segmentFor } from "./advisor";
 import { checkProductEligibility, type BusinessProfile } from "./eligibility";
 import { formatInr, type Text } from "./i18n";
 import { languageOf, type LangCode } from "./languages";
@@ -108,11 +109,29 @@ export function ownerContext(input: AssistantInput): string {
       out.push(`Left out on purpose: ${input.skipped.map((x) => `${x.name} (${x.why})`).join("; ")}.`);
     }
     const inBundle = new Set(input.lines?.map((l) => l.productId) ?? input.items.map((i) => i.productId));
-    const extras = catalogue
-      .filter((p) => !inBundle.has(p.id) && checkProductEligibility(p, input.profile!).eligible)
-      .slice(0, 10)
-      .map((p) => `${p.name} ₹${p.priceMin}–${p.priceMax}/month before GST (${p.description.split(/; |\. /)[0]})`);
-    if (extras.length) out.push(`Other products they can add from "More you can add": ${extras.join("; ")}.`);
+    // Only suggest what suits their kind of business: every product lists the segments it is meant for.
+    const segment = input.answers?.businessType
+      ? segmentFor({ businessType: input.answers.businessType, sites: input.answers.sites ?? input.profile.sites })
+      : null;
+    const candidates = catalogue.filter((p) => !inBundle.has(p.id) && checkProductEligibility(p, input.profile!).eligible);
+    const fits = candidates.filter((p) => !segment || p.targetSegments.includes(segment));
+    const notForThem = candidates.filter((p) => segment && !p.targetSegments.includes(segment));
+    if (segment) out.push(`Their kind of business: ${SEGMENT_LABELS[segment].en}.`);
+    out.push(
+      fits.length
+        ? `Other products that suit their kind of business and can be added from "More you can add": ${fits
+            .slice(0, 8)
+            .map((p) => `${p.name} ₹${p.priceMin}–${p.priceMax}/month before GST (${p.description.split(/; |\. /)[0]})`)
+            .join("; ")}.`
+        : "Nothing else in the catalogue suits their kind of business beyond what is already in the bundle.",
+    );
+    if (notForThem.length) {
+      out.push(
+        `Made for other kinds of business, so do not suggest them (if asked by name, explain who they are for): ${notForThem
+          .map((p) => `${p.name} (for ${p.targetSegments.map((x) => SEGMENT_LABELS[x as SegmentCode].en).join(", ")})`)
+          .join("; ")}.`,
+      );
+    }
 
     if (!input.profile.hasActiveGstin) out.push("They have no active GST registration, so products that need GST are not in their bundle.");
   }
@@ -149,7 +168,7 @@ export function assistantPrompt(input: AssistantInput): string {
   return `You are the owner's personal assistant inside the UdyamSaathi app, where Indian small-business owners buy Accel Business internet, phone and IT services. You are both an advisor (what to choose for their business, and why) and a guide (where things are in the app). You know every screen, their own bundle and their order.
 
 How to answer:
-- First work out what they want. "What should I choose / do I need X / is this too much / what can I skip" is a request for ADVICE: give your own clear recommendation for THEIR business, using "Why each product was suggested", which items are essential vs optional, and the totals given. Say which to keep and which optional ones they could switch off or add, with the reason in their terms. If you suggest switching something off, name it explicitly; give a new total only if "common choices" has that exact combination. Never call an optional add-on essential. Name at most 5 products; a short "•" list is fine. Then say where to do it (the switches on the ${screenName("quote", input.labels)} screen) and offer the button.
+- First work out what they want. "What should I choose / do I need X / is this too much / what can I skip" is a request for ADVICE: give your own clear recommendation for THEIR business, using "Why each product was suggested", which items are essential vs optional, and the totals given. Say which to keep and which optional ones they could switch off or add, with the reason in their terms. If you suggest switching something off, name it explicitly; give a new total only if "common choices" has that exact combination. Never call an optional add-on essential. Suggest extra products ONLY from "Other products that suit their kind of business", and only when they fit what this owner said they need; if none fit, say the bundle already covers them. Name at most 5 products; a short "•" list is fine. Then say where to do it (the switches on the ${screenName("quote", input.labels)} screen) and offer the button.
 - "Where / how do I…" is a request for DIRECTIONS: name the screen and the exact button.
 - Never repeat an earlier answer. If they ask again in other words, your last answer did not help: answer the new question directly and differently.
 - Call screens only by their on-screen names (quoted in the guide), never internal words like "recommendation" or "step 1".
@@ -157,6 +176,7 @@ How to answer:
 Rules:
 - Reply in ${L.english}, in the ${L.script} script, in simple everyday words. Keep product names, ₹ amounts and GST/KYC/UPI/WhatsApp in English.
 - Keep it short: at most 5 short sentences or a short list. Be specific and personal; no generic marketing lines.
+- State a product's requirements (GST, staff, sites, city, another line) only as written in its catalogue line; if the line says nothing, it has no such requirement.
 - Use ONLY the app guide, the owner's details, the catalogue and the FAQ below. Never invent screens, buttons, products, prices, dates or policies. If you don't know, say so and offer a partner call.
 - For their total, products or order status, use the numbers in "Owner right now" exactly. Never calculate a price yourself; if the number you need is not given, say the Quote screen shows it instantly.
 - You cannot change anything yourself. You may offer ONE button by setting "action" to one of: ${actions}. Only offer it when it takes them where they need to go; otherwise null. Don't mention action names in the reply.

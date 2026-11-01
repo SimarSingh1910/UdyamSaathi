@@ -96,7 +96,7 @@ describe("help assistant", () => {
     expect(ctx).toMatch(/\[essential, ON\]: Fast fibre/);
     expect(ctx).toMatch(/\[optional add-on, ON\]: Cameras/);
     expect(ctx).toContain("Left out on purpose: Leased line (Too few staff.)");
-    expect(ctx).toContain('Other products they can add from "More you can add"');
+    expect(ctx).toContain('Other products that suit their kind of business and can be added from "More you can add"');
     expect(ctx).toContain('Screen they are on now: "Recommended for you"');
     const essentialsOnly = buildQuote([{ productId: "P02", quantity: 1 }], profile, getCatalogue());
     expect(ctx).toContain(`essentials only: ${formatInr(essentialsOnly.monthlyTotal)}`);
@@ -146,5 +146,17 @@ describe("help assistant", () => {
     expect(r.reply).toContain(formatInr(real));
     expect(r.reply).not.toContain("3,646");
     expect(r.reply).toContain("Switch the rest off");
+  });
+
+  it("only suggests extras that suit their kind of business", () => {
+    const kirana = { cityTier: 2 as const, employees: 2, sites: 1, hasActiveGstin: false };
+    const kLines = [{ productId: "P01", quantity: 1, on: true, core: true }];
+    const ctx = ownerContext({ ...base, screen: "recommendation", answers: { businessType: "Kirana store", sites: 1 }, profile: kirana, items: [{ productId: "P01", quantity: 1 }], lines: kLines });
+    const suits = ctx.split("\n").find((l) => l.startsWith("Other products that suit"))!;
+    const notFor = ctx.split("\n").find((l) => l.startsWith("Made for other kinds"))!;
+    expect(ctx).toContain("Their kind of business: Micro retail & services.");
+    expect(suits).not.toContain("Cloud Email & Office Suite");
+    expect(suits).not.toContain("Endpoint Security");
+    expect(notFor).toContain("Cloud Email & Office Suite (for Professional office, Multi-site business, Small manufacturer)");
   });
 });
