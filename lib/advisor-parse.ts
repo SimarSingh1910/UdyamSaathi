@@ -165,15 +165,24 @@ export async function parseAnswers(
     await complete({ system, user: message.slice(0, 2000), json: true, timeoutMs: 10_000 }),
   );
   if (!reply) return { answers: rules, source: "rules" };
-
-  const clean: PartialAnswers = {};
-  if (reply.businessType && ALL_TYPES.includes(reply.businessType)) clean.businessType = reply.businessType;
-  if (typeof reply.city === "string" && reply.city.trim()) clean.city = reply.city.trim();
-  if (Number.isFinite(Number(reply.employees)) && Number(reply.employees) > 0) clean.employees = Math.round(Number(reply.employees));
-  if (Number.isFinite(Number(reply.sites)) && Number(reply.sites) > 0) clean.sites = Math.round(Number(reply.sites));
-  if (reply.currentInternet && INTERNET.includes(reply.currentInternet)) clean.currentInternet = reply.currentInternet;
-  if (Array.isArray(reply.needs)) clean.needs = reply.needs.filter((n): n is Need => NEEDS.includes(n));
-  if (typeof reply.hasGstin === "boolean") clean.hasGstin = reply.hasGstin;
-
-  return { answers: { ...rules, ...clean }, source: "llm" };
+  return { answers: { ...rules, ...cleanAnswers(reply) }, source: "llm" };
 }
+
+/** Keep only well-formed values from a model's guess at the answers. */
+export function cleanAnswers(reply: Record<string, unknown>): PartialAnswers {
+  const clean: PartialAnswers = {};
+  const r = reply as PartialAnswers;
+  if (r.businessType && ALL_TYPES.includes(r.businessType)) clean.businessType = r.businessType;
+  if (typeof r.city === "string" && r.city.trim()) clean.city = r.city.trim().slice(0, 60);
+  if (Number.isFinite(Number(r.employees)) && Number(r.employees) > 0) clean.employees = Math.min(500, Math.round(Number(r.employees)));
+  if (Number.isFinite(Number(r.sites)) && Number(r.sites) > 0) clean.sites = Math.min(50, Math.round(Number(r.sites)));
+  if (r.currentInternet && INTERNET.includes(r.currentInternet)) clean.currentInternet = r.currentInternet;
+  if (Array.isArray(r.needs)) {
+    const needs = r.needs.filter((n): n is Need => NEEDS.includes(n));
+    if (needs.length) clean.needs = needs;
+  }
+  if (typeof r.hasGstin === "boolean") clean.hasGstin = r.hasGstin;
+  return clean;
+}
+
+export { ALL_TYPES, INTERNET, NEEDS, QUESTION_TEXT };
