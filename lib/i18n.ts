@@ -201,6 +201,32 @@ export const STRINGS = {
   expected: { en: "Expected", hi: "अपेक्षित" },
   activatedOn: { en: "Fully active by", hi: "पूरी तरह चालू" },
   needHelp: { en: "Need help? One number for everything: 1800-000-0000", hi: "मदद चाहिए? सबके लिए एक नंबर: 1800-000-0000" },
+  // In-app assistant
+  assistantTitle: { en: "UdyamSaathi help", hi: "UdyamSaathi मदद" },
+  assistantOpen: { en: "Ask for help", hi: "मदद माँगें" },
+  assistantHello: {
+    en: "Hi! I know my way around this app. Ask me where to change something, about your price or documents, or to get a partner to call you.",
+    hi: "नमस्ते! मैं इस ऐप का हर हिस्सा जानता हूँ। पूछिए कि कुछ कहाँ बदलें, अपनी कीमत या दस्तावेज़ों के बारे में, या पार्टनर से कॉल करवाने के लिए।",
+  },
+  assistantPlaceholder: { en: "Ask anything about the app…", hi: "ऐप के बारे में कुछ भी पूछें…" },
+  close: { en: "Close", hi: "बंद करें" },
+  listen: { en: "Listen", hi: "सुनें" },
+  stopSpeaking: { en: "Stop", hi: "रोकें" },
+  noVoice: { en: "No voice for this language on this device", hi: "इस डिवाइस पर इस भाषा की आवाज़ नहीं है" },
+  actLanguage: { en: "Change language", hi: "भाषा बदलें" },
+  actBundle: { en: "Show my bundle", hi: "मेरा बंडल दिखाएँ" },
+  actQuote: { en: "Open my quote", hi: "मेरी कीमत खोलें" },
+  actKyc: { en: "Go to KYC", hi: "KYC पर जाएँ" },
+  actTalk: { en: "Request a call", hi: "कॉल का अनुरोध करें" },
+  sugWhy: { en: "Why these products?", hi: "ये प्रोडक्ट क्यों?" },
+  sugChangeAnswers: { en: "How do I change my answers?", hi: "अपने जवाब कैसे बदलूँ?" },
+  sugRemove: { en: "How do I remove an add-on?", hi: "ऐड-ऑन कैसे हटाऊँ?" },
+  sugSetup: { en: "What will I pay in the first month?", hi: "पहले महीने में कितना देना होगा?" },
+  sugDocs: { en: "Which documents do I need?", hi: "कौन से दस्तावेज़ चाहिए?" },
+  sugFailed: { en: "A document failed. What now?", hi: "कोई दस्तावेज़ फ़ेल हुआ, अब क्या करूँ?" },
+  sugNumber: { en: "Why do you need my number?", hi: "मेरा नंबर क्यों चाहिए?" },
+  sugWhen: { en: "When will it be installed?", hi: "इंस्टॉलेशन कब होगा?" },
+  sugLanguage: { en: "How do I change the language?", hi: "भाषा कैसे बदलूँ?" },
 } as const;
 
 type Entry = Text;

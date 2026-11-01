@@ -1,17 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
+import type { ActionId } from "@/lib/app-guide";
 import type { AdvisorAnswers, Recommendation } from "@/lib/advisor";
 import type { Product } from "@/lib/catalogue";
 import { formatInr, type StringKey, type Text } from "@/lib/i18n";
 import type { Quote } from "@/lib/quote";
 import Advisor from "./Advisor";
+import Assistant, { type AssistantContext } from "./Assistant";
 import ContactForm from "./ContactForm";
 import { useI18n } from "./I18nProvider";
 import Kyc, { type KycOutcome } from "./Kyc";
 import LanguagePicker, { LanguageGrid } from "./LanguagePicker";
 import QuoteView, { type CartLine } from "./QuoteView";
+import SpeakButton from "./SpeakButton";
 
 type Step = "advisor" | "recommendation" | "quote" | "kyc" | "contact" | "done";
 
@@ -27,6 +31,7 @@ const STEP_KEYS: StringKey[] = ["stepAdvisor", "stepQuote", "stepKyc", "stepDone
 
 export default function Journey() {
   const { lang, t, tt, chosen, machineTranslated } = useI18n();
+  const router = useRouter();
   const [step, setStep] = useState<Step>("advisor");
   const [advisorKey, setAdvisorKey] = useState(0);
   const [rec, setRec] = useState<RecResponse | null>(null);
@@ -128,6 +133,37 @@ export default function Journey() {
     setStep("advisor");
   }
 
+  // The help assistant appears once the questions are done (the advisor is a chat already).
+  const assistantActions: ActionId[] = ["open_language", "talk_to_person"];
+  if (rec && step !== "done") {
+    if (step !== "recommendation") assistantActions.push("go_bundle");
+    if (step !== "quote") assistantActions.push("go_quote");
+    if (step === "quote" || step === "contact") assistantActions.push("go_kyc");
+    assistantActions.push("start_over");
+  }
+  if (order) assistantActions.push("track_order");
+
+  const blocking = kyc?.result.checks.filter((c) => c.status === "fail" && c.id !== "gstin_inactive") ?? [];
+  const assistantContext: AssistantContext = {
+    answers,
+    profile: rec?.recommendation.profile,
+    items: cart.filter((l) => l.on && l.quantity > 0).map(({ productId, quantity }) => ({ productId, quantity })),
+    kyc:
+      step === "kyc" || step === "contact" || step === "done"
+        ? { checked: !!kyc, approved: kyc?.canOrder === true, issues: blocking.map((c) => c.message.en) }
+        : undefined,
+    orderId: order?.id,
+  };
+
+  function onAssistantAction(a: ActionId) {
+    if (a === "go_bundle") setStep("recommendation");
+    else if (a === "go_quote") setStep("quote");
+    else if (a === "go_kyc") setStep("kyc");
+    else if (a === "start_over") restart();
+    else if (a === "track_order" && order) router.push(`/track/${order.id}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   const stepIndex = { advisor: 0, recommendation: 0, quote: 1, kyc: 2, contact: 2, done: 3 }[step];
 
   return (
@@ -163,7 +199,10 @@ export default function Journey() {
       {step === "recommendation" && rec && (
         <section>
           <div className="card pitch">
-            <span className="badge">{rec.pitch ? t("aiBadge") : t("advisorBadge")}</span>
+            <div className="row pitch-head">
+              <span className="badge">{rec.pitch ? t("aiBadge") : t("advisorBadge")}</span>
+              <SpeakButton text={tt(rec.pitch ?? rec.summary)} />
+            </div>
             <p>{tt(rec.pitch ?? rec.summary)}</p>
           </div>
           <h3>{t("yourBundle")}</h3>
@@ -246,6 +285,16 @@ export default function Journey() {
         </section>
       )}
         </>
+      )}
+
+      {step !== "advisor" && (
+        <Assistant
+          screen={step}
+          actions={assistantActions}
+          onAction={onAssistantAction}
+          context={assistantContext}
+          business={{ businessType: answers?.businessType, city: answers?.city }}
+        />
       )}
     </main>
   );

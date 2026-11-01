@@ -6,6 +6,7 @@ import { formatInr } from "@/lib/i18n";
 import { dateLocale } from "@/lib/languages";
 import { LINE_LABEL, STATUS_FLOW, STATUS_LABEL, expectedDays } from "@/lib/order-flow";
 import type { Order } from "@/lib/store";
+import Assistant from "./Assistant";
 import { useI18n } from "./I18nProvider";
 import LanguagePicker from "./LanguagePicker";
 
@@ -144,6 +145,13 @@ export default function Tracker({ id }: { id: string }) {
 
       <p className="small muted">{t("liveNote")}</p>
       <p className="small muted">{t("needHelp")}</p>
+
+      <Assistant
+        screen="tracker"
+        actions={["open_language", "talk_to_person"]}
+        context={{ orderId: order.id }}
+        business={{ businessType: order.business.businessType, city: order.business.city }}
+      />
     </main>
   );
 }

@@ -22,6 +22,7 @@ import {
 import type { LangCode } from "@/lib/languages";
 import ContactForm from "./ContactForm";
 import { useI18n } from "./I18nProvider";
+import SpeakButton from "./SpeakButton";
 import VoiceButton from "./VoiceButton";
 
 type Question = "businessType" | "city" | "employees" | "sites" | "currentInternet" | "needs" | "hasGstin";
@@ -254,6 +255,7 @@ export default function Advisor({ onDone }: Props) {
       {msgs.map((m, i) => (
         <div key={i} className={`bubble ${m.from}${"ai" in m ? " ai" : ""}`}>
           {"key" in m ? t(m.key) : m.text}
+          {m.from === "bot" && <SpeakButton text={"key" in m ? t(m.key) : m.text} />}
         </div>
       ))}
       {busy && <div className="bubble bot typing">…</div>}

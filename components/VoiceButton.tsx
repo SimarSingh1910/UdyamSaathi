@@ -173,8 +173,9 @@ export default function VoiceButton({ onText, disabled }: { onText: (text: strin
         disabled={disabled || state === "transcribing"}
         aria-label={label}
         aria-pressed={state === "recording"}
+        title={label}
       >
-        🎤 <span>{label}</span>
+        🎤 <span className="mic-label">{label}</span>
       </button>
       {state === "error" && <p className="small fail">{t("micError")}</p>}
       {state === "denied" && <p className="small fail">{t("micDenied")}</p>}

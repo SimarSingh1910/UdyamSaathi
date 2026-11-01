@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LANGUAGES } from "@/lib/languages";
 import { useI18n } from "./I18nProvider";
 
@@ -29,10 +29,19 @@ export function LanguageGrid({ onPick }: { onPick?: () => void }) {
   );
 }
 
+/** Dispatch on window to open the language sheet from elsewhere (the help assistant). */
+export const OPEN_LANGUAGE_EVENT = "udyamsaathi:open-language";
+
 /** Compact button for headers; opens the language grid in a sheet. */
 export default function LanguagePicker() {
   const { language, t, loading } = useI18n();
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener(OPEN_LANGUAGE_EVENT, show);
+    return () => window.removeEventListener(OPEN_LANGUAGE_EVENT, show);
+  }, []);
 
   return (
     <>
