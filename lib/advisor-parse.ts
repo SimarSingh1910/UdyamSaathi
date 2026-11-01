@@ -1,4 +1,5 @@
 import { BUSINESS_TYPES, CITY_TIERS, type AdvisorAnswers, type CurrentInternet, type Need } from "./advisor";
+import { CITY_HI } from "./i18n";
 import { complete, parseJsonReply } from "./llm";
 
 export type PartialAnswers = Partial<AdvisorAnswers>;
@@ -78,15 +79,31 @@ function numberNear(text: string, words: RegExp): number | undefined {
   return Number.isFinite(n) ? n : WORD_NUMBERS[m[1].toLowerCase()];
 }
 
+const YES = /^(yes|yeah|yep|haan|ha|han|ji|ji haan|hai|हाँ|हां|हा|जी|जी हाँ|है|ho|aahe|ಹೌದು|ஆம்|అవును|হ্যাঁ|હા|ਹਾਂ|അതെ|ହଁ|ہاں|ji han)(?=[\s,.!?]|$)/iu;
+const NO = /^(no|nope|nahi|nahin|na|नहीं|नही|ना|nathi|ಇಲ್ಲ|இல்லை|లేదు|না|ના|ਨਹੀਂ|ഇല്ല|ନା|نہیں)(?=[\s,.!?]|$)/iu;
+
+/** Questions the advisor asks; a short spoken answer refers to the one on screen. */
+export type QuestionKey = "businessType" | "city" | "employees" | "sites" | "currentInternet" | "needs" | "hasGstin";
+const QUESTION_TEXT: Record<QuestionKey, string> = {
+  businessType: "What kind of business do you run?",
+  city: "Which city are you in?",
+  employees: "How many people work with you?",
+  sites: "How many shops, branches or locations?",
+  currentInternet: "What internet do you use today?",
+  needs: "What would help your business?",
+  hasGstin: "Is your business GST registered?",
+};
+const isQuestion = (x: unknown): x is QuestionKey => typeof x === "string" && x in QUESTION_TEXT;
+
 /** Keyword parser: works offline and in Hindi/Hinglish for common phrasings. */
-export function parseByKeywords(message: string): PartialAnswers {
+export function parseByKeywords(message: string, context?: string): PartialAnswers {
   const text = message.replace(/[०-९]/g, (d) => HINDI_DIGITS[d]);
   const out: PartialAnswers = {};
 
   const type = TYPE_KEYWORDS.find(([re]) => re.test(text));
   if (type) out.businessType = type[1];
 
-  const city = Object.keys(CITY_TIERS).find((c) => new RegExp(`\\b${c}\\b`, "i").test(text))
+  const city = Object.keys(CITY_TIERS).find((c) => new RegExp(`\\b${c}\\b`, "i").test(text) || (CITY_HI[c] && text.includes(CITY_HI[c])))
     ?? (/bangalore/i.test(text) ? "Bengaluru" : /bombay/i.test(text) ? "Mumbai" : /दिल्ली/.test(text) ? "Delhi" : undefined);
   if (city) out.city = city;
 
@@ -107,6 +124,20 @@ export function parseByKeywords(message: string): PartialAnswers {
   const needs = NEED_KEYWORDS.filter(([re]) => re.test(text)).map(([, n]) => n);
   if (needs.length) out.needs = [...new Set(needs)];
 
+  // Short answers to the question on screen: "haan", "5", "do".
+  const trimmed = text.trim().replace(/[.!?।]+$/, "");
+  if (context === "hasGstin" && out.hasGstin === undefined) {
+    if (YES.test(trimmed)) out.hasGstin = true;
+    else if (NO.test(trimmed)) out.hasGstin = false;
+  }
+  if ((context === "employees" || context === "sites") && out[context] === undefined) {
+    const m = trimmed.match(/^(\d+)/) ?? trimmed.match(new RegExp(`^(${Object.keys(WORD_NUMBERS).join("|")})\\b`, "i"));
+    if (m) {
+      const n = Number(m[1]) || WORD_NUMBERS[m[1].toLowerCase()];
+      if (n > 0) out[context] = n;
+    }
+  }
+
   return out;
 }
 
@@ -121,10 +152,17 @@ Return JSON with only the keys you are confident about:
 Never guess. Omit a key if the message does not say it.`;
 
 /** Use the LLM when configured, otherwise keywords. Keyword hits fill any gaps. */
-export async function parseAnswers(message: string): Promise<{ answers: PartialAnswers; source: "llm" | "rules" }> {
-  const rules = parseByKeywords(message);
+export async function parseAnswers(
+  message: string,
+  context?: string,
+): Promise<{ answers: PartialAnswers; source: "llm" | "rules" }> {
+  const rules = parseByKeywords(message, context);
+  const system = isQuestion(context)
+    ? `${SYSTEM}\nThe owner is answering the question "${QUESTION_TEXT[context]}" (key: ${context}). ` +
+      `A short reply such as "yes", "haan", a number or a city name answers that question.`
+    : SYSTEM;
   const reply = parseJsonReply<PartialAnswers>(
-    await complete({ system: SYSTEM, user: message.slice(0, 2000), json: true, timeoutMs: 10_000 }),
+    await complete({ system, user: message.slice(0, 2000), json: true, timeoutMs: 10_000 }),
   );
   if (!reply) return { answers: rules, source: "rules" };
 

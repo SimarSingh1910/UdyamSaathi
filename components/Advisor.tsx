@@ -12,6 +12,7 @@ import {
 } from "@/lib/advisor";
 import { INTERNET_LABELS, NEED_LABELS, SEGMENT_GROUP_LABEL, cityText, typeText, type StringKey } from "@/lib/i18n";
 import { useI18n } from "./I18nProvider";
+import VoiceButton from "./VoiceButton";
 
 type Question = "businessType" | "city" | "employees" | "sites" | "currentInternet" | "needs" | "hasGstin";
 const ORDER: Question[] = ["businessType", "city", "employees", "sites", "currentInternet", "needs", "hasGstin"];
@@ -76,26 +77,35 @@ export default function Advisor({ onDone }: Props) {
     setAnswers((a) => ({ ...a, [key]: value }));
   }
 
-  async function sendFreeText() {
-    const message = text.trim();
+  /**
+   * Free text, typed or spoken. Before the questions start it can describe the whole
+   * business; during the questions it is treated as an answer to the current one.
+   */
+  async function sendFreeText(raw?: string) {
+    const message = (raw ?? text).trim();
     if (!message) return;
     setText("");
     setBusy(true);
     setMsgs((m) => [...m, { from: "me", text: message }]);
+    const context = mode === "questions" ? pending : undefined;
     try {
       const res = await fetch("/api/advisor/parse", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, context }),
       });
       const data = await res.json();
       const parsed: Partial<AdvisorAnswers> = data.answers ?? {};
-      // Needs are always confirmed explicitly, so keep them as a preselection only.
+      // Needs are confirmed on their own screen, so they only preselect, unless
+      // the owner is answering that very question.
       const { needs: saidNeeds, ...rest } = parsed;
       if (saidNeeds?.length) parsedNeeds.current = saidNeeds;
-      setAnswers((a) => ({ ...a, ...rest }));
-      const known = Object.keys(rest).length;
-      setMsgs((m) => [...m, { from: "bot", key: known ? "understood" : "describePrompt" }]);
+      const update: Partial<AdvisorAnswers> = { ...rest };
+      if (context === "needs" && saidNeeds?.length) update.needs = saidNeeds;
+      setAnswers((a) => ({ ...a, ...update }));
+      const known = Object.keys(update).length;
+      if (mode === "intro") setMsgs((m) => [...m, { from: "bot", key: known ? "understood" : "describePrompt" }]);
+      else if (!known) setMsgs((m) => [...m, { from: "bot", key: "notUnderstood" }]);
     } catch {
       /* fall through to step-by-step questions */
     } finally {
@@ -123,9 +133,10 @@ export default function Advisor({ onDone }: Props) {
             disabled={busy}
           />
           <div className="row">
-            <button className="btn" onClick={sendFreeText} disabled={busy || !text.trim()}>
+            <button className="btn" onClick={() => sendFreeText()} disabled={busy || !text.trim()}>
               {busy ? "…" : t("send")}
             </button>
+            <VoiceButton onText={(said) => sendFreeText(said)} disabled={busy} />
             <button className="btn btn-ghost" onClick={() => setMode("questions")}>
               {t("stepByStep")}
             </button>
@@ -206,7 +217,26 @@ export default function Advisor({ onDone }: Props) {
           {m.from === "bot" ? t(m.key) : m.text}
         </div>
       ))}
-      <div className="chat-input">{renderInput()}</div>
+      <div className="chat-input">
+        {renderInput()}
+        {mode === "questions" && pending && (
+          <form
+            className="answer-bar"
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendFreeText();
+            }}
+          >
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={t("answerPlaceholder")}
+              disabled={busy}
+            />
+            <VoiceButton onText={(said) => sendFreeText(said)} disabled={busy} />
+          </form>
+        )}
+      </div>
       <div ref={endRef} />
     </section>
   );

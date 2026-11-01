@@ -60,6 +60,16 @@ export const STRINGS = {
     hi: "जैसे: पुणे में मेरी 2 बेकरी हैं, 8 लोग काम करते हैं, बिलिंग और कैमरा चाहिए",
   },
   send: { en: "Send", hi: "भेजें" },
+  micStart: { en: "Speak", hi: "बोलें" },
+  micListening: { en: "Listening… tap to stop", hi: "सुन रहा हूँ… रोकने के लिए टैप करें" },
+  micTranscribing: { en: "Understanding…", hi: "समझ रहा हूँ…" },
+  micError: { en: "Couldn't hear that. Try again or type.", hi: "सुनाई नहीं दिया। फिर से बोलें या टाइप करें।" },
+  micDenied: { en: "Allow microphone access to speak.", hi: "बोलने के लिए माइक्रोफ़ोन की अनुमति दें।" },
+  answerPlaceholder: { en: "Type or say your answer", hi: "अपना जवाब टाइप करें या बोलें" },
+  notUnderstood: {
+    en: "Sorry, I didn't catch that. Tap an option above or try again.",
+    hi: "माफ़ कीजिए, समझ नहीं आया। ऊपर कोई विकल्प चुनें या फिर से कोशिश करें।",
+  },
   stepByStep: { en: "Answer step by step", hi: "एक-एक करके जवाब दें" },
   understood: { en: "Got it. A few more questions:", hi: "समझ गया। कुछ और सवाल:" },
   qType: { en: "What kind of business do you run?", hi: "आपका बिज़नेस किस तरह का है?" },
@@ -237,7 +247,7 @@ export const BUSINESS_TYPE_HI: Record<string, string> = {
 /** Business type as a translatable Text (the English name is the key everywhere else). */
 export const typeText = (t: string): Text => ({ en: t, hi: BUSINESS_TYPE_HI[t] ?? t });
 
-const CITY_HI: Record<string, string> = {
+export const CITY_HI: Record<string, string> = {
   Delhi: "दिल्ली", Mumbai: "मुंबई", Bengaluru: "बेंगलुरु", Hyderabad: "हैदराबाद", Chennai: "चेन्नई", Pune: "पुणे",
   Kolkata: "कोलकाता", Ahmedabad: "अहमदाबाद", Vadodara: "वडोदरा", Kochi: "कोच्चि", Ludhiana: "लुधियाना", Indore: "इंदौर",
   Nagpur: "नागपुर", Lucknow: "लखनऊ", Bhopal: "भोपाल", Jaipur: "जयपुर", Mysuru: "मैसूरु", Coimbatore: "कोयंबटूर",

@@ -90,3 +90,28 @@ describe("free-text parsing without an LLM", () => {
     expect(res.needs).toContain("cctv");
   });
 });
+
+describe("short spoken answers", () => {
+  it("understands yes/no to the GST question in several languages", () => {
+    expect(parseByKeywords("haan", "hasGstin").hasGstin).toBe(true);
+    expect(parseByKeywords("हाँ", "hasGstin").hasGstin).toBe(true);
+    expect(parseByKeywords("ஆம்", "hasGstin").hasGstin).toBe(true);
+    expect(parseByKeywords("nahi", "hasGstin").hasGstin).toBe(false);
+    expect(parseByKeywords("नहीं।", "hasGstin").hasGstin).toBe(false);
+  });
+
+  it("reads a bare number as the answer to the question on screen", () => {
+    expect(parseByKeywords("5", "employees").employees).toBe(5);
+    expect(parseByKeywords("teen", "sites").sites).toBe(3);
+    expect(parseByKeywords("5", "city").employees).toBeUndefined();
+  });
+
+  it("understands a city or business said on its own", () => {
+    expect(parseByKeywords("Pune", "city").city).toBe("Pune");
+    expect(parseByKeywords("kirana ki dukaan", "businessType").businessType).toBe("Kirana store");
+  });
+});
+
+it("finds a city written in Hindi", () => {
+  expect(parseByKeywords("मेरी पुणे में किराना दुकान है").city).toBe("Pune");
+});
