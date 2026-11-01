@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { BUSINESS_TYPES, CITY_TIERS, segmentFor } from "@/lib/advisor";
 import { getCatalogue } from "@/lib/catalogue";
 import type { BusinessProfile } from "@/lib/eligibility";
+import { isLangCode } from "@/lib/languages";
 import { STATUS_LABEL, maskPhone, normalizePhone } from "@/lib/order-flow";
 import { buildQuote } from "@/lib/quote";
 import { createOrder, newOrderId, type Order } from "@/lib/store";
@@ -9,7 +10,7 @@ import { createOrder, newOrderId, type Order } from "@/lib/store";
 export const runtime = "nodejs";
 
 interface Body {
-  lang?: "en" | "hi";
+  lang?: string;
   answers?: { businessType?: string; city?: string; employees?: number; sites?: number };
   profile?: Partial<BusinessProfile>;
   items?: { productId: string; quantity: number }[];
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
     createdAt: now,
     updatedAt: now,
     status: "kyc_verified",
-    lang: body.lang === "hi" ? "hi" : "en",
+    lang: isLangCode(body.lang) ? body.lang : "en",
     business: {
       tradeName: (body.business?.tradeName || `${businessType}, ${city || "India"}`).slice(0, 120),
       legalName: body.business?.legalName?.slice(0, 160),

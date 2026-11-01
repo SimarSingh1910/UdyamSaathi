@@ -2,19 +2,24 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { Lang } from "@/lib/advisor";
-import { formatInr, tr } from "@/lib/i18n";
+import { formatInr } from "@/lib/i18n";
+import { dateLocale } from "@/lib/languages";
 import { LINE_LABEL, STATUS_FLOW, STATUS_LABEL, expectedDays } from "@/lib/order-flow";
 import type { Order } from "@/lib/store";
+import { useI18n } from "./I18nProvider";
+import LanguagePicker from "./LanguagePicker";
 
 const POLL_MS = 5000;
 const DAY_MS = 86_400_000;
 
 export default function Tracker({ id }: { id: string }) {
-  const [chosenLang, setLang] = useState<Lang | null>(null);
+  const { lang, t, tt, chosen, setLang } = useI18n();
   const [order, setOrder] = useState<Order | null | undefined>(undefined);
-  // Default to the language the owner ordered in, until they switch.
-  const lang: Lang = chosenLang ?? order?.lang ?? "en";
+
+  // Default to the language the owner ordered in, unless they picked one on this device.
+  useEffect(() => {
+    if (order && !chosen && order.lang !== lang) setLang(order.lang);
+  }, [order, chosen, lang, setLang]);
 
   // Poll so status changes made by Accel's team show up without a refresh.
   useEffect(() => {
@@ -38,11 +43,9 @@ export default function Tracker({ id }: { id: string }) {
   const header = (
     <header className="topbar">
       <Link href="/" className="brand">
-        {tr("appName", lang)}
+        {t("appName")}
       </Link>
-      <button className="chip" onClick={() => setLang(lang === "en" ? "hi" : "en")}>
-        {tr("langToggle", lang)}
-      </button>
+      <LanguagePicker />
     </header>
   );
 
@@ -51,18 +54,18 @@ export default function Tracker({ id }: { id: string }) {
     return (
       <main>
         {header}
-        <p className="card">{tr("noOrder", lang)}</p>
+        <p className="card">{t("noOrder")}</p>
         <Link href="/start" className="btn">
-          {tr("appName", lang)}
+          {t("appName")}
         </Link>
       </main>
     );
   }
 
   const fmt = (ms: number) =>
-    new Date(ms).toLocaleDateString(lang === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short" });
+    new Date(ms).toLocaleDateString(dateLocale(lang), { day: "numeric", month: "short" });
   const fmtTime = (ms: number) =>
-    new Date(ms).toLocaleString(lang === "hi" ? "hi-IN" : "en-IN", {
+    new Date(ms).toLocaleString(dateLocale(lang), {
       day: "numeric",
       month: "short",
       hour: "numeric",
@@ -77,15 +80,15 @@ export default function Tracker({ id }: { id: string }) {
   return (
     <main>
       {header}
-      <h1>{tr("trackerTitle", lang)}</h1>
+      <h1>{t("trackerTitle")}</h1>
       <p className="muted">
-        {order.business.tradeName} · {tr("orderId", lang)} <b>{order.id}</b>
+        {order.business.tradeName} · {t("orderId")} <b>{order.id}</b>
       </p>
 
       {cancelled ? (
         <div className="card warn-card">
-          <b>{STATUS_LABEL.cancelled[lang]}</b>
-          <p className="small">{order.events.at(-1)?.note[lang]}</p>
+          <b>{tt(STATUS_LABEL.cancelled)}</b>
+          <p className="small">{order.events.at(-1) ? tt(order.events.at(-1)!.note) : ""}</p>
         </div>
       ) : (
         <div className="card">
@@ -97,14 +100,14 @@ export default function Tracker({ id }: { id: string }) {
                 <li key={s} className={i < currentIdx ? "done" : i === currentIdx ? "now" : ""}>
                   <span className="dot" />
                   <div>
-                    <b>{STATUS_LABEL[s][lang]}</b>
+                    <b>{tt(STATUS_LABEL[s])}</b>
                     <p className="small muted">
-                      {at ? `✓ ${fmtTime(at)}` : `${tr("expected", lang)} ${fmt(expected)}`}
+                      {at ? `✓ ${fmtTime(at)}` : `${t("expected")} ${fmt(expected)}`}
                     </p>
                     {s === "scheduled" && order.installSlot && (
                       <p className="small">
                         📅 {fmt(new Date(`${order.installSlot}T00:00:00+05:30`).getTime())}
-                        {order.engineer && ` · ${tr("engineer", lang)}: ${order.engineer}`}
+                        {order.engineer && ` · ${t("engineer")}: ${order.engineer}`}
                       </p>
                     )}
                   </div>
@@ -121,26 +124,26 @@ export default function Tracker({ id }: { id: string }) {
             <span>
               {l.name} {l.quantity > 1 && <span className="muted">× {l.quantity}</span>}
             </span>
-            <span className={`pill pill-${l.status}`}>{LINE_LABEL[l.status][lang]}</span>
+            <span className={`pill pill-${l.status}`}>{tt(LINE_LABEL[l.status])}</span>
           </div>
         ))}
         <p className="small muted">
           {formatInr(order.monthlyTotal)}
-          {tr("perMonth", lang)} · {tr("contract", lang)} {order.contractMonths} {tr("months", lang)}
+          {t("perMonth")} · {t("contract")} {order.contractMonths} {t("months")}
         </p>
       </div>
 
-      <h3>{tr("updates", lang)}</h3>
+      <h3>{t("updates")}</h3>
       <div className="card">
         {[...order.events].reverse().map((e, i) => (
           <p key={i} className="small">
-            <span className="muted">{fmtTime(e.at)}</span> · {e.note[lang]}
+            <span className="muted">{fmtTime(e.at)}</span> · {tt(e.note)}
           </p>
         ))}
       </div>
 
-      <p className="small muted">{tr("liveNote", lang)}</p>
-      <p className="small muted">{tr("needHelp", lang)}</p>
+      <p className="small muted">{t("liveNote")}</p>
+      <p className="small muted">{t("needHelp")}</p>
     </main>
   );
 }

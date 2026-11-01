@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { Lang } from "@/lib/advisor";
-import { tr } from "@/lib/i18n";
+import { useI18n } from "./I18nProvider";
 
 const valid = (phone: string) => /^[6-9]\d{9}$/.test(phone.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, ""));
 
 interface Props {
-  lang: Lang;
   title: string;
   submitLabel: string;
   defaultName?: string;
@@ -16,7 +14,8 @@ interface Props {
 }
 
 /** Name + mobile, the only personal details the order itself needs. */
-export default function ContactForm({ lang, title, submitLabel, defaultName = "", busy, onSubmit }: Props) {
+export default function ContactForm({ title, submitLabel, defaultName = "", busy, onSubmit }: Props) {
+  const { t } = useI18n();
   const [name, setName] = useState(defaultName);
   const [phone, setPhone] = useState("");
   const [touched, setTouched] = useState(false);
@@ -33,11 +32,11 @@ export default function ContactForm({ lang, title, submitLabel, defaultName = ""
     >
       <b>{title}</b>
       <label>
-        {tr("contactName", lang)}
+        {t("contactName")}
         <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
       </label>
       <label>
-        {tr("mobile", lang)}
+        {t("mobile")}
         <input
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
@@ -47,8 +46,8 @@ export default function ContactForm({ lang, title, submitLabel, defaultName = ""
           required
         />
       </label>
-      {touched && !phoneOk && <p className="small fail">{tr("invalidMobile", lang)}</p>}
-      <p className="small muted">{tr("contactUse", lang)}</p>
+      {touched && !phoneOk && <p className="small fail">{t("invalidMobile")}</p>}
+      <p className="small muted">{t("contactUse")}</p>
       <button className="btn" disabled={busy}>
         {busy ? "…" : submitLabel}
       </button>

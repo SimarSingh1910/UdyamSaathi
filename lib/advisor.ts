@@ -2,8 +2,8 @@ import type { Product, SegmentCode } from "./catalogue";
 import { checkProductEligibility, type BusinessProfile } from "./eligibility";
 import type { QuoteItemInput } from "./quote";
 
-export type Lang = "en" | "hi";
-export type Text = Record<Lang, string>;
+import type { Text } from "./i18n";
+export type { Text };
 
 export type Need =
   | "billing"

@@ -8,15 +8,15 @@ import {
   segmentFor,
   type AdvisorAnswers,
   type CurrentInternet,
-  type Lang,
   type Need,
 } from "@/lib/advisor";
-import { INTERNET_LABELS, NEED_LABELS, STRINGS, tr, typeLabel } from "@/lib/i18n";
+import { INTERNET_LABELS, NEED_LABELS, SEGMENT_GROUP_LABEL, typeText, type StringKey } from "@/lib/i18n";
+import { useI18n } from "./I18nProvider";
 
 type Question = "businessType" | "city" | "employees" | "sites" | "currentInternet" | "needs" | "hasGstin";
 const ORDER: Question[] = ["businessType", "city", "employees", "sites", "currentInternet", "needs", "hasGstin"];
 
-const PROMPT: Record<Question, keyof typeof STRINGS> = {
+const PROMPT: Record<Question, StringKey> = {
   businessType: "qType",
   city: "qCity",
   employees: "qEmployees",
@@ -28,26 +28,18 @@ const PROMPT: Record<Question, keyof typeof STRINGS> = {
 
 const EMPLOYEE_CHOICES: [string, number][] = [["1", 1], ["2–4", 3], ["5–9", 7], ["10–24", 15], ["25–49", 35], ["50+", 60]];
 const SITE_CHOICES: [string, number][] = [["1", 1], ["2", 2], ["3", 3], ["4–5", 5], ["6–10", 8]];
-const SEGMENT_GROUP_LABEL = {
-  micro: { en: "Shop or service", hi: "दुकान या सेवा" },
-  prof: { en: "Office or clinic", hi: "ऑफ़िस या क्लिनिक" },
-  multi: { en: "Chain with many outlets", hi: "कई आउटलेट वाली चेन" },
-  mfg: { en: "Factory or workshop", hi: "फ़ैक्ट्री या वर्कशॉप" },
-} as const;
 
-interface Msg {
-  from: "bot" | "me";
-  text: string;
-}
+/** Bot messages keep their key so they re-render in a newly chosen language. */
+type Msg = { from: "bot"; key: StringKey } | { from: "me"; text: string };
 
 interface Props {
-  lang: Lang;
   onDone: (answers: AdvisorAnswers) => void;
 }
 
-export default function Advisor({ lang, onDone }: Props) {
+export default function Advisor({ onDone }: Props) {
+  const { t, tt } = useI18n();
   const [answers, setAnswers] = useState<Partial<AdvisorAnswers>>({});
-  const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", text: tr("hello", lang) }]);
+  const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", key: "hello" }]);
   const [mode, setMode] = useState<"intro" | "questions">("intro");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -76,8 +68,8 @@ export default function Advisor({ lang, onDone }: Props) {
       const said = parsedNeeds.current;
       setNeeds(said.length ? said : DEFAULT_NEEDS[seg]);
     }
-    setMsgs((m) => [...m, { from: "bot", text: tr(PROMPT[pending] as never, lang) }]);
-  }, [mode, pending, answers, lang, onDone]);
+    setMsgs((m) => [...m, { from: "bot", key: PROMPT[pending] }]);
+  }, [mode, pending, answers, onDone]);
 
   function answer<K extends Question>(key: K, value: AdvisorAnswers[K], shown: string) {
     setMsgs((m) => [...m, { from: "me", text: shown }]);
@@ -103,7 +95,7 @@ export default function Advisor({ lang, onDone }: Props) {
       if (saidNeeds?.length) parsedNeeds.current = saidNeeds;
       setAnswers((a) => ({ ...a, ...rest }));
       const known = Object.keys(rest).length;
-      setMsgs((m) => [...m, { from: "bot", text: known ? tr("understood", lang) : tr("describePrompt", lang) }]);
+      setMsgs((m) => [...m, { from: "bot", key: known ? "understood" : "describePrompt" }]);
     } catch {
       /* fall through to step-by-step questions */
     } finally {
@@ -122,20 +114,20 @@ export default function Advisor({ lang, onDone }: Props) {
     if (mode === "intro") {
       return (
         <div className="composer">
-          <p className="muted small">{tr("describePrompt", lang)}</p>
+          <p className="muted small">{t("describePrompt")}</p>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={tr("describePlaceholder", lang)}
+            placeholder={t("describePlaceholder")}
             rows={3}
             disabled={busy}
           />
           <div className="row">
             <button className="btn" onClick={sendFreeText} disabled={busy || !text.trim()}>
-              {busy ? "…" : tr("send", lang)}
+              {busy ? "…" : t("send")}
             </button>
             <button className="btn btn-ghost" onClick={() => setMode("questions")}>
-              {tr("stepByStep", lang)}
+              {t("stepByStep")}
             </button>
           </div>
         </div>
@@ -148,9 +140,9 @@ export default function Advisor({ lang, onDone }: Props) {
           <div className="choices">
             {(Object.keys(BUSINESS_TYPES) as (keyof typeof BUSINESS_TYPES)[]).map((seg) => (
               <div key={seg}>
-                <p className="group-label">{SEGMENT_GROUP_LABEL[seg][lang]}</p>
+                <p className="group-label">{tt(SEGMENT_GROUP_LABEL[seg])}</p>
                 <div className="chips">
-                  {BUSINESS_TYPES[seg].map((t) => chip(typeLabel(t, lang), () => answer("businessType", t, typeLabel(t, lang))))}
+                  {BUSINESS_TYPES[seg].map((b) => chip(tt(typeText(b)), () => answer("businessType", b, tt(typeText(b)))))}
                 </div>
               </div>
             ))}
@@ -160,7 +152,7 @@ export default function Advisor({ lang, onDone }: Props) {
         return (
           <div className="chips">
             {Object.keys(CITY_TIERS).map((c) => chip(c, () => answer("city", c, c)))}
-            {chip(tr("otherCity", lang), () => answer("city", "Other", tr("otherCity", lang)))}
+            {chip(t("otherCity"), () => answer("city", "Other", t("otherCity")))}
           </div>
         );
       case "employees":
@@ -171,7 +163,7 @@ export default function Advisor({ lang, onDone }: Props) {
         return (
           <div className="chips">
             {(Object.keys(INTERNET_LABELS) as CurrentInternet[]).map((k) =>
-              chip(INTERNET_LABELS[k][lang], () => answer("currentInternet", k, INTERNET_LABELS[k][lang])),
+              chip(tt(INTERNET_LABELS[k]), () => answer("currentInternet", k, tt(INTERNET_LABELS[k]))),
             )}
           </div>
         );
@@ -181,7 +173,7 @@ export default function Advisor({ lang, onDone }: Props) {
             <div className="chips">
               {(Object.keys(NEED_LABELS) as Need[]).map((n) =>
                 chip(
-                  NEED_LABELS[n][lang],
+                  tt(NEED_LABELS[n]),
                   () => setNeeds((cur) => (cur.includes(n) ? cur.filter((x) => x !== n) : [...cur, n])),
                   needs.includes(n),
                 ),
@@ -189,21 +181,21 @@ export default function Advisor({ lang, onDone }: Props) {
             </div>
             <button
               className="btn"
-              onClick={() => answer("needs", needs, needs.map((n) => NEED_LABELS[n][lang]).join(", ") || "—")}
+              onClick={() => answer("needs", needs, needs.map((n) => tt(NEED_LABELS[n])).join(", ") || "—")}
             >
-              {tr("done", lang)}
+              {t("done")}
             </button>
           </div>
         );
       case "hasGstin":
         return (
           <div className="chips">
-            {chip(tr("yes", lang), () => answer("hasGstin", true, tr("yes", lang)))}
-            {chip(tr("no", lang), () => answer("hasGstin", false, tr("no", lang)))}
+            {chip(t("yes"), () => answer("hasGstin", true, t("yes")))}
+            {chip(t("no"), () => answer("hasGstin", false, t("no")))}
           </div>
         );
       default:
-        return <p className="muted">{tr("thinking", lang)}</p>;
+        return <p className="muted">{t("thinking")}</p>;
     }
   }
 
@@ -211,7 +203,7 @@ export default function Advisor({ lang, onDone }: Props) {
     <section className="chat">
       {msgs.map((m, i) => (
         <div key={i} className={`bubble ${m.from}`}>
-          {m.text}
+          {m.from === "bot" ? t(m.key) : m.text}
         </div>
       ))}
       <div className="chat-input">{renderInput()}</div>

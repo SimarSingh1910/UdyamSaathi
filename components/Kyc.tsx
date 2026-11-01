@@ -1,13 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { Lang } from "@/lib/advisor";
-import { tr } from "@/lib/i18n";
+import type { StringKey } from "@/lib/i18n";
 import ContactForm from "./ContactForm";
+import { useI18n } from "./I18nProvider";
 import type { DocType } from "@/lib/kyc/parse";
 import type { KycCheck, KycResult } from "@/lib/kyc/verify";
 
-const SLOTS: { slot: DocType; label: Parameters<typeof tr>[0]; file: string }[] = [
+const SLOTS: { slot: DocType; label: StringKey; file: string }[] = [
   { slot: "gst_certificate", label: "docGst", file: "gst_certificate" },
   { slot: "udyam_certificate", label: "docUdyam", file: "udyam_certificate" },
   { slot: "address_proof", label: "docBill", file: "address_proof" },
@@ -30,7 +30,6 @@ export interface KycOutcome {
 }
 
 interface Props {
-  lang: Lang;
   /** Context sent with a help request so the partner knows who is calling. */
   business: { businessType?: string; city?: string };
   onResult: (o: KycOutcome) => void;
@@ -61,7 +60,8 @@ function getWorker(onProgress: (p: number) => void): Promise<OcrWorker> {
 
 const ICON: Record<KycCheck["status"], string> = { pass: "✅", warn: "⚠️", fail: "❌" };
 
-export default function Kyc({ lang, business, onResult, onPlaceOrder, onBack }: Props) {
+export default function Kyc({ business, onResult, onPlaceOrder, onBack }: Props) {
+  const { t, tt } = useI18n();
   const [consent, setConsent] = useState(false);
   const [marketing, setMarketing] = useState(false);
   const [docs, setDocs] = useState<Partial<Record<DocType, DocState>>>({});
@@ -137,36 +137,32 @@ export default function Kyc({ lang, business, onResult, onPlaceOrder, onBack }: 
   if (!consent) {
     return (
       <section className="card">
-        <h2>{tr("consentTitle", lang)}</h2>
-        {lang === "hi" ? (
-          <ul className="consent">
-            <li><b>क्यों:</b> सिर्फ़ आपका KYC पूरा करने और कनेक्शन चालू करने के लिए, जैसा टेलीकॉम नियमों में ज़रूरी है।</li>
-            <li><b>क्या:</b> GST और उद्यम सर्टिफ़िकेट, पते का सबूत और साइन करने वाले की ID। इससे ज़्यादा कुछ नहीं।</li>
-            <li><b>कैसे:</b> फ़ोटो आपके फ़ोन पर ही पढ़ी जाती है। सिर्फ़ पढ़ा गया टेक्स्ट जाँच के लिए भेजा जाता है, फ़ोटो नहीं।</li>
-            <li><b>कब तक:</b> जाँच के बाद टेक्स्ट तुरंत हटा दिया जाता है। ऑर्डर के लिए सिर्फ़ ज़रूरी विवरण, कानूनन तय समय तक रखे जाते हैं।</li>
-            <li><b>आपके अधिकार:</b> आप सहमति कभी भी वापस ले सकते हैं, अपना डेटा देख या सुधार सकते हैं। शिकायत: grievance@accel.example</li>
-          </ul>
-        ) : (
-          <ul className="consent">
-            <li><b>Why:</b> only to complete your KYC and activate your connection, as telecom rules require.</li>
-            <li><b>What:</b> your GST and Udyam certificates, an address proof and the signatory&apos;s ID. Nothing else.</li>
-            <li><b>How:</b> photos are read on your phone. Only the extracted text is sent for checks, never the image.</li>
-            <li><b>How long:</b> the text is discarded right after the check. Only the details your order needs are kept, for the period the law requires.</li>
-            <li><b>Your rights:</b> withdraw consent any time, see or correct your data. Grievance officer: grievance@accel.example</li>
-          </ul>
-        )}
+        <h2>{t("consentTitle")}</h2>
+        <ul className="consent">
+          {(
+            [
+              ["consentWhyLabel", "consentWhy"],
+              ["consentWhatLabel", "consentWhat"],
+              ["consentHowLabel", "consentHow"],
+              ["consentRetentionLabel", "consentRetention"],
+              ["consentRightsLabel", "consentRights"],
+            ] as const
+          ).map(([label, body]) => (
+            <li key={label}>
+              <b>{t(label)}</b> {t(body)}
+            </li>
+          ))}
+        </ul>
         <label className="toggle small">
           <input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />
-          {lang === "hi"
-            ? "(वैकल्पिक) मुझे नए ऑफ़र के बारे में WhatsApp पर बताएं।"
-            : "(Optional) Tell me about new offers on WhatsApp."}
+          {t("consentMarketing")}
         </label>
         <div className="row actions">
           <button className="btn btn-ghost" onClick={onBack}>
-            {tr("back", lang)}
+            {t("back")}
           </button>
           <button className="btn" onClick={() => setConsent(true)}>
-            {tr("consentAgree", lang)}
+            {t("consentAgree")}
           </button>
         </div>
       </section>
@@ -178,11 +174,11 @@ export default function Kyc({ lang, business, onResult, onPlaceOrder, onBack }: 
 
   return (
     <section>
-      <h2>{tr("kycTitle", lang)}</h2>
-      <p className="muted small">{tr("kycIntro", lang)}</p>
+      <h2>{t("kycTitle")}</h2>
+      <p className="muted small">{t("kycIntro")}</p>
 
       <label className="small sample">
-        {tr("sample", lang)}{" "}
+        {t("sample")}{" "}
         <select defaultValue="" onChange={(e) => loadSample(e.target.value)}>
           <option value="">—</option>
           {SAMPLES.map((k) => (
@@ -202,16 +198,16 @@ export default function Kyc({ lang, business, onResult, onPlaceOrder, onBack }: 
             <div className="doc-head">
               {d ? <img src={d.preview} alt="" className="thumb" /> : <div className="thumb empty">📄</div>}
               <div className="grow">
-                <b>{tr(s.label, lang)}</b>
+                <b>{t(s.label)}</b>
                 <p className="small muted">
                   {!d && "—"}
-                  {d?.status === "reading" && `${tr("reading", lang)} ${Math.round((d.progress ?? 0) * 100)}%`}
-                  {d?.status === "read" && `${tr("read", lang)} ✓`}
-                  {d?.status === "error" && "OCR failed"}
+                  {d?.status === "reading" && `${t("reading")} ${Math.round((d.progress ?? 0) * 100)}%`}
+                  {d?.status === "read" && `${t("read")} ✓`}
+                  {d?.status === "error" && t("ocrFailed")}
                 </p>
               </div>
               <label className="btn btn-small">
-                {d ? tr("replace", lang) : tr("upload", lang)}
+                {d ? t("replace") : t("upload")}
                 <input
                   type="file"
                   accept="image/*"
@@ -224,10 +220,10 @@ export default function Kyc({ lang, business, onResult, onPlaceOrder, onBack }: 
                 />
               </label>
             </div>
-            {wrong && <p className="small fail">❌ This looks like a {wrong.detected.replace("_", " ")}, not a {s.slot.replace("_", " ")}.</p>}
+            {wrong && <p className="small fail">❌ {t("wrongDocument")}</p>}
             {checks.map((c) => (
               <p key={c.id} className={`small ${c.status}`}>
-                {ICON[c.status]} {c.message[lang]}
+                {ICON[c.status]} {tt(c.message)}
               </p>
             ))}
           </div>
@@ -236,34 +232,33 @@ export default function Kyc({ lang, business, onResult, onPlaceOrder, onBack }: 
 
       {result && (
         <div className={`card ${blocking.length ? "warn-card" : "ok-card"}`}>
-          <b>{blocking.length ? tr("kycNeedsAction", lang) : tr("kycApproved", lang)}</b>
-          {!result.gstinUsable && <p className="small">{tr("gstProductsRemoved", lang)}</p>}
+          <b>{blocking.length ? t("kycNeedsAction") : t("kycApproved")}</b>
+          {!result.gstinUsable && <p className="small">{t("gstProductsRemoved")}</p>}
         </div>
       )}
 
       <div className="row actions">
         <button className="btn btn-ghost" onClick={onBack}>
-          {tr("back", lang)}
+          {t("back")}
         </button>
         {!result || checking ? (
           <button className="btn" disabled={!allRead || checking} onClick={verify}>
-            {checking ? tr("checking", lang) : tr("verify", lang)}
+            {checking ? t("checking") : t("verify")}
           </button>
         ) : blocking.length === 0 ? (
           <button className="btn" onClick={onPlaceOrder}>
-            {tr("placeOrder", lang)}
+            {t("placeOrder")}
           </button>
         ) : (
           <button className="btn btn-ghost" onClick={() => setHelpForm(true)} disabled={helpForm}>
-            {tr("callMe", lang)}
+            {t("callMe")}
           </button>
         )}
       </div>
       {helpForm && !helpSent && (
         <ContactForm
-          lang={lang}
-          title={tr("helpTitle", lang)}
-          submitLabel={tr("requestHelp", lang)}
+          title={t("helpTitle")}
+          submitLabel={t("requestHelp")}
           defaultName={result?.extracted?.signatory ?? ""}
           busy={helpBusy}
           onSubmit={async (contact) => {
@@ -286,7 +281,7 @@ export default function Kyc({ lang, business, onResult, onPlaceOrder, onBack }: 
           }}
         />
       )}
-      {helpSent && <p className="card ok-card small">{tr("callbackSent", lang)}</p>}
+      {helpSent && <p className="card ok-card small">{t("callbackSent")}</p>}
     </section>
   );
 }

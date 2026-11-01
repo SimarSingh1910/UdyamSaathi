@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
-import type { AdvisorAnswers, Lang, Recommendation } from "@/lib/advisor";
+import type { AdvisorAnswers, Recommendation } from "@/lib/advisor";
 import type { Product } from "@/lib/catalogue";
-import { STRINGS, formatInr, tr } from "@/lib/i18n";
+import { formatInr, type StringKey, type Text } from "@/lib/i18n";
 import type { Quote } from "@/lib/quote";
 import Advisor from "./Advisor";
 import ContactForm from "./ContactForm";
+import { useI18n } from "./I18nProvider";
 import Kyc, { type KycOutcome } from "./Kyc";
+import LanguagePicker, { LanguageGrid } from "./LanguagePicker";
 import QuoteView, { type CartLine } from "./QuoteView";
 
 type Step = "advisor" | "recommendation" | "quote" | "kyc" | "contact" | "done";
@@ -16,12 +18,15 @@ type Step = "advisor" | "recommendation" | "quote" | "kyc" | "contact" | "done";
 interface RecResponse {
   recommendation: Recommendation;
   quote: Quote;
-  pitch: string;
-  pitchSource: "llm" | "rules";
+  /** Written by the LLM in English and translated like the rest of the UI. */
+  pitch: string | null;
+  summary: Text;
 }
 
+const STEP_KEYS: StringKey[] = ["stepAdvisor", "stepQuote", "stepKyc", "stepDone"];
+
 export default function Journey() {
-  const [lang, setLang] = useState<Lang>("en");
+  const { lang, t, tt, chosen, machineTranslated } = useI18n();
   const [step, setStep] = useState<Step>("advisor");
   const [advisorKey, setAdvisorKey] = useState(0);
   const [rec, setRec] = useState<RecResponse | null>(null);
@@ -40,7 +45,7 @@ export default function Journey() {
         const res = await fetch("/api/advisor/recommend", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ answers, lang }),
+          body: JSON.stringify({ answers }),
         });
         if (!res.ok) throw new Error(await res.text());
         const data: RecResponse = await res.json();
@@ -56,10 +61,10 @@ export default function Journey() {
         );
         setStep("recommendation");
       } catch {
-        setError("Something went wrong. Please try again.");
+        setError(t("somethingWrong"));
       }
     },
-    [lang],
+    [t],
   );
 
   async function onKycResult(outcome: KycOutcome) {
@@ -129,32 +134,39 @@ export default function Journey() {
     <main>
       <header className="topbar">
         <Link href="/" className="brand">
-          {tr("appName", lang)}
+          {t("appName")}
         </Link>
-        <button className="chip" onClick={() => setLang(lang === "en" ? "hi" : "en")}>
-          {tr("langToggle", lang)}
-        </button>
+        <LanguagePicker />
       </header>
 
+      {!chosen && step === "advisor" ? (
+        <section>
+          <h2>{t("chooseLanguage")}</h2>
+          <LanguageGrid />
+        </section>
+      ) : (
+        <>
+      {machineTranslated && <p className="small muted mt-note">{t("machineTranslated")}</p>}
+
       <ol className="progress">
-        {STRINGS.steps[lang].map((s, i) => (
-          <li key={s} className={i <= stepIndex ? "on" : ""}>
-            {s}
+        {STEP_KEYS.map((k, i) => (
+          <li key={k} className={i <= stepIndex ? "on" : ""}>
+            {t(k)}
           </li>
         ))}
       </ol>
 
       {error && <p className="card warn-card small">{error}</p>}
 
-      {step === "advisor" && <Advisor key={advisorKey} lang={lang} onDone={onAdvisorDone} />}
+      {step === "advisor" && <Advisor key={advisorKey} onDone={onAdvisorDone} />}
 
       {step === "recommendation" && rec && (
         <section>
           <div className="card pitch">
-            <span className="badge">{rec.pitchSource === "llm" ? "AI" : "Advisor"}</span>
-            <p>{rec.pitch}</p>
+            <span className="badge">{rec.pitch ? t("aiBadge") : t("advisorBadge")}</span>
+            <p>{tt(rec.pitch ?? rec.summary)}</p>
           </div>
-          <h3>{tr("yourBundle", lang)}</h3>
+          <h3>{t("yourBundle")}</h3>
           {rec.recommendation.items.map((i) => {
             const line = rec.quote.lines.find((l) => l.productId === i.productId);
             return (
@@ -164,24 +176,24 @@ export default function Journey() {
                     {line?.name} {i.quantity > 1 && <span className="muted">× {i.quantity}</span>}
                   </span>
                   <span className="item-price">
-                    {line ? `${formatInr(line.monthly)}${tr("perMonth", lang)}` : ""}
+                    {line ? `${formatInr(line.monthly)}${t("perMonth")}` : ""}
                   </span>
                 </div>
-                <p className="muted small">{i.why[lang]}</p>
+                <p className="muted small">{tt(i.why)}</p>
               </div>
             );
           })}
           <div className="card total-inline">
-            <span>{tr("monthlyTotal", lang)}</span>
+            <span>{t("monthlyTotal")}</span>
             <strong>{formatInr(rec.quote.monthlyTotal)}</strong>
-            <span className="muted small">{tr("inclGst", lang)}</span>
+            <span className="muted small">{t("inclGst")}</span>
           </div>
           <div className="row actions">
             <button className="btn btn-ghost" onClick={restart}>
-              {tr("startOver", lang)}
+              {t("startOver")}
             </button>
             <button className="btn" onClick={() => setStep("quote")}>
-              {tr("seePrice", lang)}
+              {t("seePrice")}
             </button>
           </div>
         </section>
@@ -189,7 +201,6 @@ export default function Journey() {
 
       {step === "quote" && rec && (
         <QuoteView
-          lang={lang}
           rec={rec.recommendation}
           cart={cart}
           setCart={setCart}
@@ -200,7 +211,6 @@ export default function Journey() {
 
       {step === "kyc" && (
         <Kyc
-          lang={lang}
           business={{ businessType: answers?.businessType, city: answers?.city }}
           onResult={onKycResult}
           onPlaceOrder={() => setStep("contact")}
@@ -210,9 +220,8 @@ export default function Journey() {
 
       {step === "contact" && (
         <ContactForm
-          lang={lang}
-          title={tr("contactTitle", lang)}
-          submitLabel={tr("placeOrder", lang)}
+          title={t("contactTitle")}
+          submitLabel={t("placeOrder")}
           defaultName={kyc?.result.extracted?.signatory ?? ""}
           busy={placing}
           onSubmit={placeOrder}
@@ -221,20 +230,22 @@ export default function Journey() {
 
       {step === "done" && order && (
         <section className="card done">
-          <h2>🎉 {tr("orderPlaced", lang)}</h2>
+          <h2>🎉 {t("orderPlaced")}</h2>
           <p>
-            {tr("orderId", lang)}: <b>{order.id}</b>
+            {t("orderId")}: <b>{order.id}</b>
           </p>
           <p>
-            {tr("monthlyTotal", lang)}: <b>{formatInr(order.monthlyTotal)}</b> {tr("inclGst", lang)}
+            {t("monthlyTotal")}: <b>{formatInr(order.monthlyTotal)}</b> {t("inclGst")}
           </p>
           <p>
-            {tr("readyIn", lang)} <b>{order.days} {tr("days", lang)}</b>
+            {t("readyIn")} <b>{order.days} {t("days")}</b>
           </p>
           <Link className="btn" href={`/track/${order.id}`}>
-            {tr("trackOrder", lang)}
+            {t("trackOrder")}
           </Link>
         </section>
+      )}
+        </>
       )}
     </main>
   );
