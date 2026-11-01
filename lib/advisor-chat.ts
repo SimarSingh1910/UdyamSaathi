@@ -38,7 +38,7 @@ export function missing(answers: PartialAnswers): QuestionKey[] {
 }
 
 /** Compact catalogue for the prompt, built from the live (admin-editable) catalogue. Kept short: every turn pays for it. */
-function catalogueBrief(): string {
+export function catalogueBrief(): string {
   const k = (n: number) => (n >= 1000 && n % 100 === 0 ? `${n / 1000}k` : String(n));
   return getCatalogue()
     .map((p) => {
@@ -55,7 +55,7 @@ function catalogueBrief(): string {
     .join("\n");
 }
 
-const FAQ = `
+export const FAQ = `
 - Everything comes as one bundle with one monthly bill and one support number (1800-000-0000).
 - Price depends on the bundle: 1 product is at the top of its range, 2–3 products mid-range, 4 or more at the lowest price. GST of 18% is added. Setup fees are paid once.
 - Each product has a minimum contract; the bundle's contract is the longest of them.
