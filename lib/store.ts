@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { parseProduct, type Product } from "./catalogue";
 import { loadDataset } from "./data";
+import type { LangCode } from "./languages";
 
 /**
  * Tiny persistent store for the prototype: one JSON file, read once and written
@@ -35,7 +36,7 @@ export interface Order {
   createdAt: number;
   updatedAt: number;
   status: OrderStatus;
-  lang: "en" | "hi";
+  lang: LangCode;
   business: {
     tradeName: string;
     legalName?: string;
@@ -93,6 +94,11 @@ interface StoreData {
   orders: Order[];
   requests: HelpRequest[];
   leadActions: Record<string, LeadAction>;
+}
+
+/** Folder that holds runtime data (the store and translation caches). */
+export function dataDir(): string {
+  return path.dirname(storePath());
 }
 
 function storePath(): string {
