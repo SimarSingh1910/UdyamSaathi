@@ -115,3 +115,8 @@ describe("short spoken answers", () => {
 it("finds a city written in Hindi", () => {
   expect(parseByKeywords("मेरी पुणे में किराना दुकान है").city).toBe("Pune");
 });
+
+it("treats Other types by their segment", () => {
+  expect(segmentFor({ businessType: "Other manufacturing unit", sites: 1 })).toBe("mfg");
+  expect(segmentFor({ businessType: "Other office", sites: 1 })).toBe("prof");
+});

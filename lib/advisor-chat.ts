@@ -2,7 +2,7 @@ import { CITY_TIERS, type AdvisorAnswers } from "./advisor";
 import { ALL_TYPES, INTERNET, NEEDS, QUESTION_TEXT, cleanAnswers, parseByKeywords, type PartialAnswers, type QuestionKey } from "./advisor-parse";
 import { getCatalogue } from "./catalogue";
 import { formatInr } from "./i18n";
-import { languageOf, type LangCode } from "./languages";
+import { LANGUAGES, isLangCode, languageOf, type LangCode } from "./languages";
 import { complete, parseJsonReply } from "./llm";
 
 /**
@@ -27,6 +27,10 @@ export interface ChatResult {
   next: QuestionKey | null;
   /** The owner wants a person (or asked something only a person can answer). */
   handoff: boolean;
+  /** Which fact the reply asks for, so the app can show matching buttons. */
+  asking: QuestionKey | null;
+  /** The owner asked to switch the app's language. */
+  language: LangCode | null;
   source: "llm" | "rules";
 }
 
@@ -61,6 +65,7 @@ const FAQ = `
 - Without an active GST registration the owner can still buy most products; WhatsApp Business, SMS packs, toll-free numbers, leased lines, SD-WAN, cloud telephony, managed firewall and machine IoT need GST.
 - Udyam registration is free at udyamregistration.gov.in; GST registration is done at gst.gov.in.
 - Personal data is used only for KYC and activation, and consent can be withdrawn.
+- The app works in English and 22 Indian languages. If the owner asks to switch language, set "language" to its code and reply in that language.
 - For anything not covered here (exact coverage at an address, custom discounts, early-exit fees, complaints about another provider), do not guess: offer a call from a local Accel partner and set "handoff": true.`;
 
 function systemPrompt(lang: LangCode, answers: PartialAnswers, pending: QuestionKey | null): string {
@@ -85,7 +90,7 @@ Rules:
 - If they want to talk to a person, set "handoff": true and say a local partner will call them.
 
 Facts to collect (key: allowed values):
-- businessType: one of ${JSON.stringify(ALL_TYPES)}
+- businessType: one of ${JSON.stringify(ALL_TYPES)}. If nothing matches exactly, pick the closest one, or the "Other ..." type of the right kind (a factory or workshop is "Other manufacturing unit", even if it also trades).
 - city: one of ${JSON.stringify(Object.keys(CITY_TIERS))} or another Indian city as written
 - employees: number of people working, sites: number of shops/branches/locations
 - currentInternet: one of ${JSON.stringify(INTERNET)}
@@ -100,7 +105,10 @@ ${catalogueBrief()}
 
 FAQ:${FAQ}
 
-Respond with JSON only: {"reply": string, "updates": {only facts stated in the owner's LAST message}, "handoff": boolean}`;
+Language codes: ${LANGUAGES.map((l) => `${l.code}=${l.english}`).join(", ")}.
+
+Respond with JSON only:
+{"reply": string, "updates": {only facts stated in the owner's LAST message}, "asking": the fact key your reply asks for, or null, "language": a language code if the owner asked to switch language, else null, "handoff": boolean}`;
 }
 
 export async function advisorChat(args: {
@@ -114,7 +122,7 @@ export async function advisorChat(args: {
   const rules = parseByKeywords(last, args.pending ?? undefined);
 
   const transcript = history.map((t) => `${t.role === "user" ? "Owner" : "Advisor"}: ${t.content}`).join("\n");
-  const raw = parseJsonReply<{ reply?: unknown; updates?: Record<string, unknown>; handoff?: unknown }>(
+  const raw = parseJsonReply<{ reply?: unknown; updates?: Record<string, unknown>; handoff?: unknown; asking?: unknown; language?: unknown }>(
     await complete({
       system: systemPrompt(args.lang, args.answers, args.pending),
       user: `Conversation so far:\n${transcript}\n\nReply to the owner's last message.`,
@@ -126,7 +134,7 @@ export async function advisorChat(args: {
   if (!raw || typeof raw.reply !== "string" || !raw.reply.trim()) {
     // No LLM (or it failed): keyword understanding plus the scripted next question.
     const merged = { ...args.answers, ...rules };
-    return { reply: null, updates: rules, next: missing(merged)[0] ?? null, handoff: false, source: "rules" };
+    return { reply: null, updates: rules, next: missing(merged)[0] ?? null, handoff: false, asking: null, language: null, source: "rules" };
   }
 
   const updates = { ...rules, ...cleanAnswers(raw.updates ?? {}) };
@@ -136,6 +144,8 @@ export async function advisorChat(args: {
     updates,
     next: missing(merged)[0] ?? null,
     handoff: raw.handoff === true,
+    asking: QUESTION_ORDER.includes(raw.asking as QuestionKey) ? (raw.asking as QuestionKey) : null,
+    language: isLangCode(raw.language) ? raw.language : null,
     source: "llm",
   };
 }

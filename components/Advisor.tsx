@@ -19,6 +19,7 @@ import {
   typeText,
   type StringKey,
 } from "@/lib/i18n";
+import type { LangCode } from "@/lib/languages";
 import ContactForm from "./ContactForm";
 import { useI18n } from "./I18nProvider";
 import VoiceButton from "./VoiceButton";
@@ -50,6 +51,8 @@ interface ChatResponse {
   updates: Partial<AdvisorAnswers>;
   next: Question | null;
   handoff: boolean;
+  asking: Question | null;
+  language: LangCode | null;
   source: "llm" | "rules";
 }
 
@@ -63,7 +66,7 @@ interface Props {
  * a shortcut. The bundle itself is always built by the rules engine.
  */
 export default function Advisor({ onDone }: Props) {
-  const { t, tt, lang } = useI18n();
+  const { t, tt, lang, setLang } = useI18n();
   const [answers, setAnswers] = useState<Partial<AdvisorAnswers>>({});
   const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", key: "hello" }]);
   const [text, setText] = useState("");
@@ -134,17 +137,20 @@ export default function Advisor({ onDone }: Props) {
       const update: Partial<AdvisorAnswers> = { ...rest };
       if (pending === "needs" && saidNeeds?.length) update.needs = saidNeeds;
 
+      if (data.language && data.language !== lang) setLang(data.language);
       if (data.reply) {
         setMsgs((m) => [...m, { from: "bot", text: data.reply!, ai: true }]);
-        // The AI's reply already asks for the next fact.
-        if (data.next) asked.current.add(data.next);
+        // If the AI already asked for the fact we need next, don't ask it again;
+        // otherwise the scripted question (with its buttons) follows.
+        if (data.next && data.asking === data.next) asked.current.add(data.next);
+        else if (data.next) asked.current.delete(data.next);
       } else if (!Object.keys(update).length) {
         setMsgs((m) => [...m, { from: "bot", key: "notUnderstood" }]);
       }
       if (data.handoff) setHandoff("form");
       setAnswers((a) => ({ ...a, ...update }));
     } catch {
-      setMsgs((m) => [...m, { from: "bot", key: "notUnderstood" }]);
+      setMsgs((m) => [...m, { from: "bot", key: "somethingWrong" }]);
     } finally {
       setBusy(false);
     }

@@ -83,3 +83,44 @@ describe("advisor chat", () => {
     expect(missing({ businessType: "Salon", employees: 2 })).toEqual(["city", "sites", "currentInternet", "needs", "hasGstin"]);
   });
 });
+
+describe("advisor chat: staying in sync", () => {
+  it("reports which question it asked and switches language on request", async () => {
+    nextReply = JSON.stringify({
+      reply: "ज़रूर! आपका बिज़नेस किस तरह का है?",
+      updates: {},
+      asking: "businessType",
+      language: "hi",
+      handoff: false,
+    });
+    const r = await advisorChat({ history: [{ role: "user", content: "can we talk in hindi?" }], answers: {}, lang: "en", pending: "businessType" });
+    expect(r.asking).toBe("businessType");
+    expect(r.language).toBe("hi");
+  });
+
+  it("records an unlisted business as the closest Other type", async () => {
+    nextReply = JSON.stringify({
+      reply: "Which city is the factory in?",
+      updates: { businessType: "Other manufacturing unit" },
+      asking: "city",
+      language: null,
+      handoff: false,
+    });
+    const r = await advisorChat({
+      history: [{ role: "user", content: "I have a factory making industrial cleaning equipment" }],
+      answers: {},
+      lang: "en",
+      pending: "businessType",
+    });
+    expect(r.updates.businessType).toBe("Other manufacturing unit");
+    expect(r.next).toBe("city");
+    expect(lastSystem).toMatch(/Other manufacturing unit/);
+  });
+
+  it("ignores made-up language codes and question keys", async () => {
+    nextReply = JSON.stringify({ reply: "ok", updates: {}, asking: "favouriteColour", language: "klingon", handoff: false });
+    const r = await advisorChat({ history: [{ role: "user", content: "hi" }], answers: {}, lang: "en", pending: "businessType" });
+    expect(r.asking).toBeNull();
+    expect(r.language).toBeNull();
+  });
+});

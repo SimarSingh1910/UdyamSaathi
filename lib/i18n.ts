@@ -244,6 +244,8 @@ export const BUSINESS_TYPE_HI: Record<string, string> = {
   "Pre-school chain": "प्री-स्कूल चेन", "Budget hotel group": "होटल ग्रुप", "Auto-parts unit": "ऑटो-पार्ट्स यूनिट",
   "Textile unit": "टेक्सटाइल यूनिट", "Food processing unit": "फ़ूड प्रोसेसिंग यूनिट", "Packaging unit": "पैकेजिंग यूनिट",
   "Plastic moulding unit": "प्लास्टिक मोल्डिंग यूनिट", "Printing press": "प्रिंटिंग प्रेस", "Furniture workshop": "फ़र्नीचर वर्कशॉप",
+  "Other shop or service": "दूसरी दुकान या सेवा", "Other office": "दूसरा ऑफ़िस", "Other chain business": "दूसरा चेन बिज़नेस",
+  "Other manufacturing unit": "दूसरी मैन्युफैक्चरिंग यूनिट",
 };
 
 /** Business type as a translatable Text (the English name is the key everywhere else). */

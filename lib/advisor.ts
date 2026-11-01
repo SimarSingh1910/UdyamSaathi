@@ -46,10 +46,10 @@ export const CITY_TIERS: Record<string, 1 | 2> = {
 };
 
 export const BUSINESS_TYPES: Record<SegmentCode, string[]> = {
-  micro: ["Kirana store", "Pharmacy", "Salon", "Bakery", "Sweet shop", "Boutique", "Hardware store", "Mobile repair shop", "Optician", "Stationery shop"],
-  prof: ["Dental clinic", "Physiotherapy clinic", "Diagnostic lab", "CA firm", "Law office", "Coaching centre", "Architecture studio", "Insurance agency", "Real estate agency", "Travel agency"],
-  multi: ["Restaurant chain", "Bakery chain", "Pharmacy chain", "Apparel retail chain", "Electronics retail chain", "Gym chain", "Pre-school chain", "Budget hotel group"],
-  mfg: ["Auto-parts unit", "Textile unit", "Food processing unit", "Packaging unit", "Plastic moulding unit", "Printing press", "Furniture workshop"],
+  micro: ["Kirana store", "Pharmacy", "Salon", "Bakery", "Sweet shop", "Boutique", "Hardware store", "Mobile repair shop", "Optician", "Stationery shop", "Other shop or service"],
+  prof: ["Dental clinic", "Physiotherapy clinic", "Diagnostic lab", "CA firm", "Law office", "Coaching centre", "Architecture studio", "Insurance agency", "Real estate agency", "Travel agency", "Other office"],
+  multi: ["Restaurant chain", "Bakery chain", "Pharmacy chain", "Apparel retail chain", "Electronics retail chain", "Gym chain", "Pre-school chain", "Budget hotel group", "Other chain business"],
+  mfg: ["Auto-parts unit", "Textile unit", "Food processing unit", "Packaging unit", "Plastic moulding unit", "Printing press", "Furniture workshop", "Other manufacturing unit"],
 };
 
 /** Work out the segment from the business type, then let size override it. */
