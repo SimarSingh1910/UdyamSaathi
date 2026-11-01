@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { Lang } from "@/lib/advisor";
 import { tr } from "@/lib/i18n";
+import ContactForm from "./ContactForm";
 import type { DocType } from "@/lib/kyc/parse";
 import type { KycCheck, KycResult } from "@/lib/kyc/verify";
 
@@ -24,12 +25,14 @@ interface DocState {
 }
 
 export interface KycOutcome {
-  result: KycResult;
+  result: KycResult & { extracted?: { gstin?: string; signatory?: string } };
   canOrder: boolean;
 }
 
 interface Props {
   lang: Lang;
+  /** Context sent with a help request so the partner knows who is calling. */
+  business: { businessType?: string; city?: string };
   onResult: (o: KycOutcome) => void;
   onPlaceOrder: () => void;
   onBack: () => void;
@@ -58,13 +61,21 @@ function getWorker(onProgress: (p: number) => void): Promise<OcrWorker> {
 
 const ICON: Record<KycCheck["status"], string> = { pass: "✅", warn: "⚠️", fail: "❌" };
 
-export default function Kyc({ lang, onResult, onPlaceOrder, onBack }: Props) {
+export default function Kyc({ lang, business, onResult, onPlaceOrder, onBack }: Props) {
   const [consent, setConsent] = useState(false);
   const [marketing, setMarketing] = useState(false);
   const [docs, setDocs] = useState<Partial<Record<DocType, DocState>>>({});
-  const [result, setResult] = useState<(KycResult & { wrongDoc?: { slot: DocType; detected: DocType }[] }) | null>(null);
+  const [result, setResult] = useState<
+    | (KycResult & {
+        wrongDoc?: { slot: DocType; detected: DocType }[];
+        extracted?: { gstin?: string; udyam?: string; signatory?: string; billDate?: string };
+      })
+    | null
+  >(null);
   const [checking, setChecking] = useState(false);
-  const [callback, setCallback] = useState(false);
+  const [helpForm, setHelpForm] = useState(false);
+  const [helpSent, setHelpSent] = useState(false);
+  const [helpBusy, setHelpBusy] = useState(false);
   const queue = useRef(Promise.resolve());
 
   const setDoc = (slot: DocType, patch: Partial<DocState>) =>
@@ -243,12 +254,39 @@ export default function Kyc({ lang, onResult, onPlaceOrder, onBack }: Props) {
             {tr("placeOrder", lang)}
           </button>
         ) : (
-          <button className="btn btn-ghost" onClick={() => setCallback(true)} disabled={callback}>
+          <button className="btn btn-ghost" onClick={() => setHelpForm(true)} disabled={helpForm}>
             {tr("callMe", lang)}
           </button>
         )}
       </div>
-      {callback && <p className="card small">{tr("callbackSent", lang)}</p>}
+      {helpForm && !helpSent && (
+        <ContactForm
+          lang={lang}
+          title={tr("helpTitle", lang)}
+          submitLabel={tr("requestHelp", lang)}
+          defaultName={result?.extracted?.signatory ?? ""}
+          busy={helpBusy}
+          onSubmit={async (contact) => {
+            setHelpBusy(true);
+            try {
+              const res = await fetch("/api/requests", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  kind: "kyc_help",
+                  contact,
+                  business: { ...business, tradeName: result?.business?.tradeName },
+                  reasons: blocking.map((c) => c.message.en),
+                }),
+              });
+              if (res.ok) setHelpSent(true);
+            } finally {
+              setHelpBusy(false);
+            }
+          }}
+        />
+      )}
+      {helpSent && <p className="card ok-card small">{tr("callbackSent", lang)}</p>}
     </section>
   );
 }
