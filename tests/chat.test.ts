@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { parseByKeywords } from "@/lib/advisor-parse";
 
 // Scripted LLM so the conversation logic can be tested without a network.
 let nextReply: string | null = null;
@@ -122,5 +123,30 @@ describe("advisor chat: staying in sync", () => {
     const r = await advisorChat({ history: [{ role: "user", content: "hi" }], answers: {}, lang: "en", pending: "businessType" });
     expect(r.asking).toBeNull();
     expect(r.language).toBeNull();
+  });
+});
+
+describe("keyword rules and questions", () => {
+  it("does not take a question about a product as what the owner uses today", () => {
+    expect(parseByKeywords("what is the early exit fee if I cancel the leased line after 6 months?", "employees").currentInternet).toBeUndefined();
+    expect(parseByKeywords("क्या लीज्ड लाइन के लिए leased line ज़रूरी है", "employees").currentInternet).toBeUndefined();
+  });
+  it("still records it when it is a statement or the answer to that question", () => {
+    expect(parseByKeywords("we have a leased line", "employees").currentInternet).toBe("Leased line");
+    expect(parseByKeywords("leased line?", "currentInternet").currentInternet).toBe("Leased line");
+  });
+});
+
+describe("asking flag", () => {
+  it("is dropped when the reply does not actually ask anything, so the scripted question follows", async () => {
+    const { advisorChat } = await import("@/lib/advisor-chat");
+    nextReply = JSON.stringify({ reply: "Your business is a cleaning equipment factory.", updates: { businessType: "Other manufacturing unit" }, asking: "city" });
+    const r = await advisorChat({ history: [{ role: "user", content: "I have a factory" }], answers: {}, lang: "en", pending: "businessType" });
+    expect(r.next).toBe("city");
+    expect(r.asking).toBeNull();
+
+    nextReply = JSON.stringify({ reply: "Got it, a factory. Which city is it in?", updates: { businessType: "Other manufacturing unit" }, asking: "city" });
+    const r2 = await advisorChat({ history: [{ role: "user", content: "I have a factory" }], answers: {}, lang: "en", pending: "businessType" });
+    expect(r2.asking).toBe("city");
   });
 });

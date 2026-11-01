@@ -1,7 +1,6 @@
 import { CITY_TIERS, type AdvisorAnswers } from "./advisor";
 import { ALL_TYPES, INTERNET, NEEDS, QUESTION_TEXT, cleanAnswers, parseByKeywords, type PartialAnswers, type QuestionKey } from "./advisor-parse";
 import { getCatalogue } from "./catalogue";
-import { formatInr } from "./i18n";
 import { LANGUAGES, isLangCode, languageOf, type LangCode } from "./languages";
 import { complete, parseJsonReply } from "./llm";
 
@@ -38,20 +37,20 @@ export function missing(answers: PartialAnswers): QuestionKey[] {
   return QUESTION_ORDER.filter((k) => answers[k] === undefined);
 }
 
-/** Compact catalogue for the prompt, built from the live (admin-editable) catalogue. */
+/** Compact catalogue for the prompt, built from the live (admin-editable) catalogue. Kept short: every turn pays for it. */
 function catalogueBrief(): string {
+  const k = (n: number) => (n >= 1000 && n % 100 === 0 ? `${n / 1000}k` : String(n));
   return getCatalogue()
     .map((p) => {
       const rules = [
-        p.cityTiers.length === 1 ? `tier ${p.cityTiers[0]} cities only` : null,
+        p.cityTiers.length === 1 ? `tier-${p.cityTiers[0]} cities` : null,
         p.minEmployees > 1 ? `${p.minEmployees}+ staff` : null,
         p.minSites > 1 ? `${p.minSites}+ sites` : null,
         p.requiresGstin ? "needs active GST" : null,
-        p.requiresOneOf.length ? `needs an internet line (${p.requiresOneOf.join("/")})` : null,
+        p.requiresOneOf.length ? "needs an Accel internet line" : null,
       ].filter(Boolean);
-      return `- ${p.name} [${p.category}]: ${p.description}. ${formatInr(p.priceMin)}–${formatInr(p.priceMax)}/month ${p.unit}` +
-        `${p.setupFee ? `, setup ${formatInr(p.setupFee)} once` : ""}, min ${p.minContractMonths} months, installs in ~${p.installDays} days` +
-        `${rules.length ? `; ${rules.join(", ")}` : ""}.`;
+      return `- ${p.name}: ${p.description.split(/; |\. /)[0].replace(/\.$/, "")}. ₹${k(p.priceMin)}–${k(p.priceMax)}/mo${p.unit && p.unit !== "per connection" ? ` ${p.unit}` : ""}` +
+        `${p.setupFee ? `, setup ₹${k(p.setupFee)}` : ""}, ${p.minContractMonths}m min, ~${p.installDays}d install${rules.length ? `; ${rules.join(", ")}` : ""}`;
     })
     .join("\n");
 }
@@ -63,12 +62,13 @@ const FAQ = `
 - After ordering, the owner sees installation and activation live on an order tracker, so they don't need to call support.
 - KYC needs: GST certificate, Udyam certificate, an electricity bill from the last 90 days as address proof, and the ID of the person signing. Photos are read on the phone; only the text is checked. It usually takes minutes.
 - Without an active GST registration the owner can still buy most products; WhatsApp Business, SMS packs, toll-free numbers, leased lines, SD-WAN, cloud telephony, managed firewall and machine IoT need GST.
-- Udyam registration is free at udyamregistration.gov.in; GST registration is done at gst.gov.in.
-- Personal data is used only for KYC and activation, and consent can be withdrawn.
+- Udyam registration is free at udyamregistration.gov.in; GST at gst.gov.in.
+- Personal data is used only for KYC and activation; consent can be withdrawn.
+- Catalogue shorthand: "12m min" = 12-month minimum contract, "~3d install" = installed in about 3 days.
 - The app works in English and 22 Indian languages. If the owner asks to switch language, set "language" to its code and reply in that language.
 - For anything not covered here (exact coverage at an address, custom discounts, early-exit fees, complaints about another provider), do not guess: offer a call from a local Accel partner and set "handoff": true.`;
 
-function systemPrompt(lang: LangCode, answers: PartialAnswers, pending: QuestionKey | null): string {
+export function systemPrompt(lang: LangCode, answers: PartialAnswers, pending: QuestionKey | null): string {
   const L = languageOf(lang);
   const known = Object.entries(answers)
     .filter(([, v]) => v !== undefined)
@@ -85,6 +85,7 @@ Rules:
 - Reply in ${L.english}, in the ${L.script} script, in simple words a shopkeeper uses. Keep product names, ₹ amounts and GST/KYC/UPI/WhatsApp in English.
 - At most 3 short sentences. Warm, plain, no jargon.
 - Never invent products, prices, discounts or policies. Quote prices only as the ranges in the catalogue.
+- Before saying whether a product suits them, check its catalogue line. "needs active GST" means it is NOT available without GST registration; say so plainly.
 - Only put a fact in "updates" if the owner clearly said it. Asking about a product does not mean they use it or want it. When unsure, leave it out and ask.
 - Never say internal labels such as "Other manufacturing unit" or field names to the owner; describe their business in their own words.
 - After answering, always end your reply by asking for the next fact listed below, unless all facts are known.
@@ -108,7 +109,7 @@ ${catalogueBrief()}
 
 FAQ:${FAQ}
 
-Language codes: ${LANGUAGES.map((l) => `${l.code}=${l.english}`).join(", ")}.
+Language codes: ${LANGUAGES.map((l) => `${l.code}=${l.english}`).join(" ")}.
 
 Respond with JSON only:
 {"reply": string, "updates": {only facts stated in the owner's LAST message}, "asking": the fact key your reply asks for, or null, "language": a language code if the owner asked to switch language, else null, "handoff": boolean}`;
@@ -142,12 +143,17 @@ export async function advisorChat(args: {
 
   const updates = { ...rules, ...cleanAnswers(raw.updates ?? {}) };
   const merged: PartialAnswers = { ...args.answers, ...updates };
+  const reply = raw.reply.trim().slice(0, 800);
+  const next = missing(merged)[0] ?? null;
+  const asking = QUESTION_ORDER.includes(raw.asking as QuestionKey) ? (raw.asking as QuestionKey) : null;
   return {
-    reply: raw.reply.trim().slice(0, 800),
+    reply,
     updates,
-    next: missing(merged)[0] ?? null,
+    next,
     handoff: raw.handoff === true,
-    asking: QUESTION_ORDER.includes(raw.asking as QuestionKey) ? (raw.asking as QuestionKey) : null,
+    // Trust "asking" only if the reply really asks something; otherwise the app shows
+    // the scripted question (with its buttons) after the reply.
+    asking: asking && /[?？؟]/.test(reply) ? asking : null,
     language: isLangCode(raw.language) ? raw.language : null,
     source: "llm",
   };

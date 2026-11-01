@@ -112,12 +112,17 @@ export function parseByKeywords(message: string, context?: string): PartialAnswe
   const sites = numberNear(text, /shops?|stores?|branch(?:es)?|outlets?|locations?|sites?|दुकानें|दुकान|ब्रांच/);
   if (sites) out.sites = sites;
 
-  if (/hotspot|phone.?(?:ka|se)? internet|मोबाइल.*इंटरनेट|हॉटस्पॉट/i.test(text)) out.currentInternet = "Mobile hotspot";
-  else if (/home broadband|home wifi|घर का/i.test(text)) out.currentInternet = "Home broadband";
-  else if (/leased line/i.test(text)) out.currentInternet = "Leased line";
-  else if (/business broadband|(use|have|got|hai|है).{0,15}(broadband|fibre|fiber)|(broadband|fibre|fiber).{0,10}(hai|है|connection)/i.test(text))
-    out.currentInternet = "Business broadband";
-  else if (/no internet|इंटरनेट नहीं/i.test(text)) out.currentInternet = "None";
+  // A question about a product ("early exit fee on the leased line?") says nothing about
+  // what they use today, unless that is what we just asked.
+  const isQuestion = /[?؟]\s*$/.test(text.trim()) || /^(what|how|is|are|can|does|do|will|which|kya|क्या|कैसे|कितना)(?=[\s,]|$)/iu.test(text.trim());
+  if (!isQuestion || context === "currentInternet") {
+    if (/hotspot|phone.?(?:ka|se)? internet|मोबाइल.*इंटरनेट|हॉटस्पॉट/i.test(text)) out.currentInternet = "Mobile hotspot";
+    else if (/home broadband|home wifi|घर का/i.test(text)) out.currentInternet = "Home broadband";
+    else if (/leased line/i.test(text)) out.currentInternet = "Leased line";
+    else if (/business broadband|(use|have|got|hai|है).{0,15}(broadband|fibre|fiber)|(broadband|fibre|fiber).{0,10}(hai|है|connection)/i.test(text))
+      out.currentInternet = "Business broadband";
+    else if (/no internet|इंटरनेट नहीं/i.test(text)) out.currentInternet = "None";
+  }
 
   // Only a clear statement counts: "kya GST ke bina milega?" is a question, not an answer.
   if (/\bno gst|gst nahi hai|gst नहीं है|not gst registered|not registered (for|under) gst/i.test(text)) out.hasGstin = false;
