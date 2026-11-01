@@ -22,6 +22,8 @@ export interface AssistantContext {
   answers?: Partial<AdvisorAnswers> | null;
   profile?: BusinessProfile;
   items?: QuoteItemInput[];
+  lines?: { productId: string; quantity: number; on: boolean; core: boolean; why?: string }[];
+  skipped?: { name: string; why: string }[];
   kyc?: { checked: boolean; approved: boolean; issues: string[] };
   orderId?: string;
 }

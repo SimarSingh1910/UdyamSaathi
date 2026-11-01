@@ -148,6 +148,8 @@ export default function Journey() {
     answers,
     profile: rec?.recommendation.profile,
     items: cart.filter((l) => l.on && l.quantity > 0).map(({ productId, quantity }) => ({ productId, quantity })),
+    lines: cart.map((l) => ({ productId: l.productId, quantity: l.quantity, on: l.on, core: l.core, why: l.why?.en })),
+    skipped: rec?.recommendation.skipped.map((x) => ({ name: x.name, why: x.why.en })),
     kyc:
       step === "kyc" || step === "contact" || step === "done"
         ? { checked: !!kyc, approved: kyc?.canOrder === true, issues: blocking.map((c) => c.message.en) }
