@@ -48,9 +48,11 @@ export const STRINGS = {
 
   // Advisor
   hello: {
-    en: "Namaste! I'm your Accel Business advisor. Tell me about your business and I'll suggest the right bundle with one clear monthly price.",
-    hi: "नमस्ते! मैं आपका Accel Business सलाहकार हूँ। अपने बिज़नेस के बारे में बताइए, मैं सही बंडल और एक साफ़ मासिक कीमत बताऊँगा।",
+    en: "Namaste! I'm your Accel Business advisor. Tell me about your business in your own words, ask me anything, or tap the options below. I'll suggest the right bundle with one clear monthly price.",
+    hi: "नमस्ते! मैं आपका Accel Business सलाहकार हूँ। अपने बिज़नेस के बारे में अपने शब्दों में बताइए, कुछ भी पूछिए, या नीचे दिए विकल्प चुनिए। मैं सही बंडल और एक साफ़ मासिक कीमत बताऊँगा।",
   },
+  chatPlaceholder: { en: "Type or say anything…", hi: "कुछ भी लिखें या बोलें…" },
+  talkToPerson: { en: "Prefer to talk to a person?", hi: "किसी व्यक्ति से बात करना चाहते हैं?" },
   describePrompt: {
     en: "Describe your business in a line, or answer step by step.",
     hi: "एक लाइन में अपना बिज़नेस बताइए, या एक-एक सवाल का जवाब दीजिए।",

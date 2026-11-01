@@ -294,3 +294,7 @@ h3 { font-size: 1rem; margin: 20px 0 6px; }
 @keyframes mic-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(228,0,0,0.45); } 50% { box-shadow: 0 0 0 10px rgba(228,0,0,0); } }
 .answer-bar { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
 .answer-bar input { flex: 1; min-width: 0; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+.bubble.ai { border-color: #f3c2c2; }
+.bubble.typing { color: var(--muted); letter-spacing: 2px; }
+.talk-human { display: block; margin-top: 10px; }
+.answer-bar .btn-small { padding: 10px 14px; }
