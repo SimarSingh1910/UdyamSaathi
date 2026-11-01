@@ -5,16 +5,21 @@ import { getCatalogue } from "@/lib/catalogue";
 import { formatInr } from "@/lib/i18n";
 
 let nextReply: string | null = null;
+let queue: (string | null)[] = [];
 let lastSystem = "";
+let lastUser = "";
+let calls = 0;
 vi.mock("@/lib/llm", async (orig) => ({
   ...(await orig<typeof import("@/lib/llm")>()),
-  complete: async ({ system }: { system: string }) => {
+  complete: async ({ system, user }: { system: string; user: string }) => {
     lastSystem = system;
-    return nextReply;
+    lastUser = user;
+    calls++;
+    return queue.length ? queue.shift()! : nextReply;
   },
 }));
 
-const { assistantChat, ownerContext } = await import("@/lib/assistant");
+const { assistantChat, ownerContext, similarity, rupeeAmounts, dropSentencesWith } = await import("@/lib/assistant");
 
 const base = {
   history: [{ role: "user" as const, content: "how do I change the language?" }],
@@ -28,6 +33,8 @@ const profile = { cityTier: 1 as const, employees: 3, sites: 1, hasActiveGstin: 
 describe("help assistant", () => {
   beforeEach(() => {
     nextReply = null;
+    queue = [];
+    calls = 0;
   });
 
   it("answers 'where do I…' from the app guide when no LLM is available", async () => {
@@ -69,7 +76,7 @@ describe("help assistant", () => {
     const items = [{ productId: "P01", quantity: 8 }, { productId: "P08", quantity: 7 }, { productId: "P09", quantity: 8 }];
     const ctx = ownerContext({ ...base, profile, items });
     const rest = buildQuote(items.filter((i) => i.productId !== "P09"), profile, getCatalogue());
-    expect(ctx).toContain(`without Backup 4G/5G Failover: ${formatInr(rest.monthlyTotal)}`);
+    expect(ctx).toContain(`everything except Backup 4G/5G Failover: ${formatInr(rest.monthlyTotal)}`);
     expect(ctx).toContain("NOT placed an order yet");
   });
 
@@ -77,5 +84,67 @@ describe("help assistant", () => {
     const ctx = ownerContext({ ...base, kyc: { checked: true, approved: false, issues: ["Bill is older than 90 days."] }, orderId: "NOPE" });
     expect(ctx).toContain("KYC: needs action: Bill is older than 90 days.");
     expect(ctx).not.toContain("Their order");
+  });
+
+  const lines = [
+    { productId: "P02", quantity: 1, on: true, core: true, why: "Fast fibre for the office and factory floor." },
+    { productId: "P23", quantity: 20, on: true, core: false, why: "Cameras on the floor you can watch from your phone." },
+  ];
+
+  it("knows why each product was suggested, what is optional, and what else they can add", () => {
+    const ctx = ownerContext({ ...base, screen: "recommendation", profile, items: lines.map(({ productId, quantity }) => ({ productId, quantity })), lines, skipped: [{ name: "Leased line", why: "Too few staff." }] });
+    expect(ctx).toMatch(/\[essential, ON\]: Fast fibre/);
+    expect(ctx).toMatch(/\[optional add-on, ON\]: Cameras/);
+    expect(ctx).toContain("Left out on purpose: Leased line (Too few staff.)");
+    expect(ctx).toContain('Other products they can add from "More you can add"');
+    expect(ctx).toContain('Screen they are on now: "Recommended for you"');
+    const essentialsOnly = buildQuote([{ productId: "P02", quantity: 1 }], profile, getCatalogue());
+    expect(ctx).toContain(`essentials only: ${formatInr(essentialsOnly.monthlyTotal)}`);
+    expect(ctx).toContain("Essentials (keep): Biz Fibre 300. Optional add-ons (can be switched off): Cloud CCTV.");
+    expect(ctx).not.toContain("now: recommendation");
+  });
+
+  it("asks again when the model repeats its previous answer", async () => {
+    const same = "Tap Start over on your bundle screen to change your answers and get a new bundle.";
+    queue = [JSON.stringify({ reply: same, action: null }), JSON.stringify({ reply: "Keep the fibre; the cameras are optional.", action: "go_kyc" })];
+    const r = await assistantChat({
+      ...base,
+      history: [
+        { role: "user", content: "how do I change answers" },
+        { role: "assistant", content: same },
+        { role: "user", content: "no, tell me what I should choose" },
+      ],
+    });
+    expect(calls).toBe(2);
+    expect(lastUser).toContain("did not help");
+    expect(r.reply).toBe("Keep the fibre; the cameras are optional.");
+    expect(similarity(same, same)).toBe(1);
+    expect(similarity(same, "Keep the fibre; the cameras are optional.")).toBeLessThan(0.3);
+  });
+
+  it("gives advice from the bundle when no LLM is available", async () => {
+    const r = await assistantChat({ ...base, actions: ["go_quote"], lines, history: [{ role: "user", content: "मैं क्या-क्या चूज करूं इसमें" }] });
+    expect(r.source).toBe("rules");
+    expect(typeof r.reply === "object" && r.reply.en).toMatch(/keep the essentials: Biz Fibre 300.*optional: Cloud CCTV/);
+    expect(r.action).toBe("go_quote");
+  });
+
+  it("reads rupee amounts in any format and script", () => {
+    expect(rupeeAmounts("total ₹9,022 or ₹999–1199, leased ₹8k–12k, setup Rs. 1,500 and ₹९,०२२")).toEqual([9022, 999, 1199, 8000, 12000, 1500, 9022]);
+    expect(dropSentencesWith("Keep fibre. It costs ₹123 more. Done.\n• A ₹5\n• B", (p) => p.includes("₹"))).toBe("Keep fibre. Done.\n\n• B");
+  });
+
+  it("never lets an invented price through", async () => {
+    const items = lines.map(({ productId, quantity }) => ({ productId, quantity }));
+    const real = buildQuote([{ productId: "P02", quantity: 1 }], profile, getCatalogue()).monthlyTotal;
+    const invented = `Keep only the fibre: ${formatInr(real)} a month. Adding email makes it ₹3,646. Switch the rest off on the Quote screen.`;
+    // First draft and the corrected draft both invent a number: the sentence is removed.
+    queue = [JSON.stringify({ reply: invented, action: null }), JSON.stringify({ reply: invented, action: null })];
+    const r = await assistantChat({ ...base, profile, items, lines });
+    expect(calls).toBe(2);
+    expect(lastUser).toContain("not in the data: ₹3,646");
+    expect(r.reply).toContain(formatInr(real));
+    expect(r.reply).not.toContain("3,646");
+    expect(r.reply).toContain("Switch the rest off");
   });
 });

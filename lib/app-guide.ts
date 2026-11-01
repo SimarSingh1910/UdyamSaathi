@@ -57,20 +57,39 @@ export const GUIDE_LABEL_KEYS = [
   "placeOrder",
   "trackOrder",
   "talkToPerson",
+  "yourBundle",
+  "trackerTitle",
+  "contactTitle",
 ] as const satisfies readonly StringKey[];
 export type GuideLabels = Partial<Record<(typeof GUIDE_LABEL_KEYS)[number], string>>;
 
+const label = (labels: GuideLabels, k: (typeof GUIDE_LABEL_KEYS)[number]) => `"${(labels[k] ?? STRINGS[k].en).slice(0, 60)}"`;
+
+/** How the owner sees each screen named, so the assistant never says internal names. */
+export function screenName(screen: Screen, labels: GuideLabels = {}): string {
+  const key = ({
+    advisor: "stepAdvisor",
+    recommendation: "yourBundle",
+    quote: "stepQuote",
+    kyc: "kycTitle",
+    contact: "contactTitle",
+    done: "stepDone",
+    tracker: "trackerTitle",
+  } as const)[screen];
+  return label(labels, key);
+}
+
 export function appGuide(labels: GuideLabels = {}): string {
-  const L = (k: (typeof GUIDE_LABEL_KEYS)[number]) => `"${(labels[k] ?? STRINGS[k].en).slice(0, 60)}"`;
+  const L = (k: (typeof GUIDE_LABEL_KEYS)[number]) => label(labels, k);
   return `Screens, in order (the bar of steps at the top, ${L("stepAdvisor")} → ${L("stepQuote")} → ${L("stepKyc")} → ${L("stepDone")}, only shows progress; it is not clickable):
 - Language: the globe button at the top right of every screen shows the current language; tap it to pick from English and 22 Indian languages. Everything, including this assistant, switches.
 - Advisor (step 1): a short chat asks business type, city, staff, locations, current internet, what they need, and GST. They can type, tap the answer buttons, or tap the mic and speak. ${L("talkToPerson")} under the chat asks a partner to call.
-- Your bundle (still step 1): a short summary, then each recommended product with why it is there and its monthly price, and the monthly total including GST. Buttons: ${L("startOver")} and ${L("seePrice")}. To change any answer before ordering (business type, city, staff, locations, current internet, needs, GST), tap ${L("startOver")}: the questions are asked again and a new bundle is built.
+- ${L("yourBundle")} (the bundle, still step 1): a short summary, then each recommended product with why it is there and its monthly price, and the monthly total including GST. Buttons: ${L("startOver")} and ${L("seePrice")}. To change any answer before ordering (business type, city, staff, locations, current internet, needs, GST), tap ${L("startOver")}: the questions are asked again and a new bundle is built.
 - Quote (step 2): ${L("essentials")} are always included; ${L("addOns")} each have an on/off switch; − and + change how many (lines, sites). ${L("notIncluded")} explains anything left out. ${L("moreOptions")} lists other products with a button to add them. The summary shows the monthly total with GST, one-time setup, contract length, days to get everything working, and the bundle saving. The price updates instantly. Buttons: ${L("back")} (to the bundle) and ${L("continueKyc")}.
 - KYC (step 3): first ${L("consentTitle")}: what is collected, why, and for how long, plus an optional box for offers on WhatsApp; ${L("consentAgree")} continues. Then ${L("kycTitle")}: four photos: GST certificate, Udyam certificate, an electricity bill from the last 90 days (address proof), and the ID of the person signing. Each has ${L("upload")} (later ${L("replace")}). Photos are read on the phone; only the text is checked. ${L("verify")} runs the checks; every document shows ticks or a cross with the reason. To fix a failed one: ${L("replace")} that photo with a clear, straight, recent one and tap ${L("verify")} again, or ${L("callMe")}. If GST is not active, products that need GST are removed and the rest is repriced. ${L("sample")} fills in a demo applicant. When all is fine: ${L("placeOrder")}. ${L("back")} returns to the quote.
-- Contact: name and a 10-digit mobile number, then ${L("placeOrder")}.
+- ${L("contactTitle")}: name and a 10-digit mobile number, then ${L("placeOrder")}.
 - Done (step 4): order ID, monthly total, days to activation, and ${L("trackOrder")}.
-- Order tracker (its own page, link /track/<order ID>; bookmark it): live steps Order placed → KYC verified → Installation booked → Engineer on site → All services active, with times, the engineer's name and visit date once booked, and an updates list. It refreshes by itself; no need to call support.
+- ${L("trackerTitle")} (the order tracker, its own page, link /track/<order ID>; bookmark it): live steps Order placed → KYC verified → Installation booked → Engineer on site → All services active, with times, the engineer's name and visit date once booked, and an updates list. It refreshes by itself; no need to call support.
 Only after an order is placed, these need a local partner: changing the address, city or plan of a placed order, cancelling an order, payments and bills, custom discounts, exact coverage at an address.`;
 }
 

@@ -141,8 +141,9 @@ export async function complete(args: CompleteArgs): Promise<string | null> {
           body: JSON.stringify({
             model,
             temperature: 0.2,
-            // gpt-oss is a reasoning model; keep it fast for a chat UI.
-            ...(model.includes("gpt-oss") ? { reasoning_effort: "low" } : {}),
+            // gpt-oss is a reasoning model: keep the large one fast; give the small one a
+            // little more thinking so its answers hold up when it stands in.
+            ...(model.includes("gpt-oss") ? { reasoning_effort: model.includes("20b") ? "medium" : "low" } : {}),
             messages: [
               { role: "system", content: args.system },
               { role: "user", content: args.user },

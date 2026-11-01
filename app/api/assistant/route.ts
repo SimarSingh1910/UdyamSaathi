@@ -51,6 +51,21 @@ export async function POST(req: Request) {
       quantity: Math.max(1, Math.min(100, Number(i.quantity) || 1)),
     }));
 
+  const lines = (Array.isArray(b.lines) ? b.lines : [])
+    .filter((l: { productId?: unknown }) => typeof l?.productId === "string")
+    .slice(0, 30)
+    .map((l: { productId: string; quantity?: unknown; on?: unknown; core?: unknown; why?: unknown }) => ({
+      productId: l.productId.slice(0, 20),
+      quantity: Math.max(1, Math.min(100, Number(l.quantity) || 1)),
+      on: l.on !== false,
+      core: l.core === true,
+      why: str(l.why, 240),
+    }));
+  const skipped = (Array.isArray(b.skipped) ? b.skipped : [])
+    .slice(0, 10)
+    .map((x: { name?: unknown; why?: unknown }) => ({ name: str(x?.name, 80) ?? "", why: str(x?.why, 240) ?? "" }))
+    .filter((x: { name: string }) => x.name);
+
   const kyc =
     b.kyc && typeof b.kyc === "object"
       ? {
@@ -68,7 +83,10 @@ export async function POST(req: Request) {
     actions: (Array.isArray(b.actions) ? b.actions : []).filter(isActionId),
     answers: cleanAnswers(b.answers ?? {}),
     profile,
-    items,
+    // The quote is priced from the lines switched on when the app sends them.
+    items: lines.length ? lines.filter((l: { on: boolean }) => l.on).map(({ productId, quantity }: { productId: string; quantity: number }) => ({ productId, quantity })) : items,
+    lines,
+    skipped,
     kyc,
     orderId: str(b.orderId, 40),
   });
