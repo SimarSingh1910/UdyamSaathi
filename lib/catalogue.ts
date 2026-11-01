@@ -1,4 +1,4 @@
-import { loadDataset } from "./data";
+import { listProducts } from "./store";
 
 export type SegmentCode = "micro" | "prof" | "multi" | "mfg";
 
@@ -57,11 +57,12 @@ export function parseProduct(row: Record<string, string>): Product {
   };
 }
 
-let products: Product[] | null = null;
-
+/**
+ * Products currently on sale. Seeded from product_catalogue.csv on first run;
+ * Accel staff can add, edit, hide or delete them from the back office.
+ */
 export function getCatalogue(): Product[] {
-  if (!products) products = loadDataset("product_catalogue").map(parseProduct);
-  return products;
+  return listProducts(false);
 }
 
 export function getProduct(id: string): Product | undefined {

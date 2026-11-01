@@ -7,5 +7,7 @@ export default defineConfig({
   },
   test: {
     include: ["tests/**/*.test.ts"],
+    // Each test worker gets its own throwaway store, seeded from the CSVs.
+    setupFiles: ["tests/setup.ts"],
   },
 });
