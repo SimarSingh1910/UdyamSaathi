@@ -1,13 +1,50 @@
-import type { Lang } from "./advisor";
+/**
+ * UI copy, written by hand in English and Hindi. Other languages are translated
+ * from the English text (see lib/translate.ts). Keep sentences short: owners read
+ * these on a phone.
+ */
+export type Text = { en: string; hi: string };
 
-/** UI copy in English and Hindi. Keep sentences short: owners read these on a phone. */
 export const STRINGS = {
   appName: { en: "UdyamSaathi", hi: "उद्यमसाथी" },
-  langToggle: { en: "हिंदी", hi: "English" },
-  steps: {
-    en: ["Advisor", "Quote", "KYC", "Done"],
-    hi: ["सलाह", "कीमत", "KYC", "पूरा"],
+  language: { en: "Language", hi: "भाषा" },
+  chooseLanguage: { en: "Choose your language", hi: "अपनी भाषा चुनें" },
+  translating: { en: "Translating…", hi: "अनुवाद हो रहा है…" },
+  machineTranslated: {
+    en: "This language is machine-translated and may contain mistakes.",
+    hi: "यह भाषा मशीन से अनुवादित है, इसमें गलतियाँ हो सकती हैं।",
   },
+  stepAdvisor: { en: "Advisor", hi: "सलाह" },
+  stepQuote: { en: "Quote", hi: "कीमत" },
+  stepKyc: { en: "KYC", hi: "KYC" },
+  stepDone: { en: "Done", hi: "पूरा" },
+  startNow: { en: "Start now", hi: "अभी शुरू करें" },
+  heroTitle: { en: "Get your business online in one sitting", hi: "एक ही बार में अपना बिज़नेस ऑनलाइन करें" },
+  heroBody: {
+    en: "Internet, business SIMs, WhatsApp, cloud email, security and CCTV: one bundle, one bill, one support number.",
+    hi: "इंटरनेट, बिज़नेस SIM, WhatsApp, क्लाउड ईमेल, सुरक्षा और CCTV: एक बंडल, एक बिल, एक सपोर्ट नंबर।",
+  },
+  landing1Title: { en: "Tell us about your business", hi: "अपने बिज़नेस के बारे में बताइए" },
+  landing1Body: {
+    en: "Answer a few questions in your language. Our advisor recommends a bundle and explains why.",
+    hi: "अपनी भाषा में कुछ सवालों के जवाब दें। हमारा सलाहकार बंडल सुझाएगा और वजह भी बताएगा।",
+  },
+  landing2Title: { en: "See one clear monthly price", hi: "एक साफ़ मासिक कीमत देखें" },
+  landing2Body: {
+    en: "Toggle add-ons on or off and watch the price update. No product codes, no hidden fees.",
+    hi: "ऐड-ऑन चालू या बंद करें और कीमत तुरंत बदलती देखें। कोई प्रोडक्ट कोड नहीं, कोई छिपा शुल्क नहीं।",
+  },
+  landing3Title: { en: "Finish KYC in minutes", hi: "मिनटों में KYC पूरा करें" },
+  landing3Body: {
+    en: "We read your documents on your phone and check them against GST and Udyam records instantly.",
+    hi: "हम आपके दस्तावेज़ आपके फ़ोन पर ही पढ़ते हैं और तुरंत GST और उद्यम रिकॉर्ड से मिलाते हैं।",
+  },
+  landing4Title: { en: "Track your order", hi: "अपना ऑर्डर ट्रैक करें" },
+  landing4Body: {
+    en: "Check installation and activation status any time, without calling support.",
+    hi: "सपोर्ट को कॉल किए बिना, कभी भी इंस्टॉलेशन और चालू होने की स्थिति देखें।",
+  },
+  languagesCount: { en: "Available in English and 22 Indian languages", hi: "अंग्रेज़ी और 22 भारतीय भाषाओं में उपलब्ध" },
 
   // Advisor
   hello: {
@@ -55,16 +92,47 @@ export const STRINGS = {
   essentials: { en: "Essentials", hi: "ज़रूरी" },
   addOns: { en: "Add-ons you can switch on or off", hi: "ऐड-ऑन, जिन्हें चालू या बंद कर सकते हैं" },
   moreOptions: { en: "More you can add", hi: "और जोड़ सकते हैं" },
-  bundlePricing: {
-    en: { single: "Single product price", bundle: "Bundle price (2–3 products)", full_bundle: "Best bundle price (4+ products)" },
-    hi: { single: "एक प्रोडक्ट की कीमत", bundle: "बंडल कीमत (2–3 प्रोडक्ट)", full_bundle: "सबसे अच्छी बंडल कीमत (4+ प्रोडक्ट)" },
-  },
+  priceSingle: { en: "Single product price", hi: "एक प्रोडक्ट की कीमत" },
+  priceBundle: { en: "Bundle price (2–3 products)", hi: "बंडल कीमत (2–3 प्रोडक्ट)" },
+  priceFullBundle: { en: "Best bundle price (4+ products)", hi: "सबसे अच्छी बंडल कीमत (4+ प्रोडक्ट)" },
+  each: { en: "each", hi: "प्रति यूनिट" },
   continueKyc: { en: "Continue to KYC", hi: "KYC पर आगे बढ़ें" },
   back: { en: "Back", hi: "वापस" },
 
   // KYC
   consentTitle: { en: "Before we check your documents", hi: "दस्तावेज़ जाँचने से पहले" },
   consentAgree: { en: "I agree, start KYC", hi: "मैं सहमत हूँ, KYC शुरू करें" },
+  consentWhyLabel: { en: "Why:", hi: "क्यों:" },
+  consentWhy: {
+    en: "only to complete your KYC and activate your connection, as telecom rules require.",
+    hi: "सिर्फ़ आपका KYC पूरा करने और कनेक्शन चालू करने के लिए, जैसा टेलीकॉम नियमों में ज़रूरी है।",
+  },
+  consentWhatLabel: { en: "What:", hi: "क्या:" },
+  consentWhat: {
+    en: "your GST and Udyam certificates, an address proof and the signatory's ID. Nothing else.",
+    hi: "GST और उद्यम सर्टिफ़िकेट, पते का सबूत और साइन करने वाले की ID। इससे ज़्यादा कुछ नहीं।",
+  },
+  consentHowLabel: { en: "How:", hi: "कैसे:" },
+  consentHow: {
+    en: "photos are read on your phone. Only the extracted text is sent for checks, never the image.",
+    hi: "फ़ोटो आपके फ़ोन पर ही पढ़ी जाती है। सिर्फ़ पढ़ा गया टेक्स्ट जाँच के लिए भेजा जाता है, फ़ोटो नहीं।",
+  },
+  consentRetentionLabel: { en: "How long:", hi: "कब तक:" },
+  consentRetention: {
+    en: "the text is discarded right after the check. Only the details your order needs are kept, for the period the law requires.",
+    hi: "जाँच के बाद टेक्स्ट तुरंत हटा दिया जाता है। ऑर्डर के लिए सिर्फ़ ज़रूरी विवरण, कानूनन तय समय तक रखे जाते हैं।",
+  },
+  consentRightsLabel: { en: "Your rights:", hi: "आपके अधिकार:" },
+  consentRights: {
+    en: "withdraw consent any time, see or correct your data. Grievance officer: grievance@accel.example",
+    hi: "आप सहमति कभी भी वापस ले सकते हैं, अपना डेटा देख या सुधार सकते हैं। शिकायत: grievance@accel.example",
+  },
+  consentMarketing: {
+    en: "(Optional) Tell me about new offers on WhatsApp.",
+    hi: "(वैकल्पिक) मुझे नए ऑफ़र के बारे में WhatsApp पर बताएं।",
+  },
+  ocrFailed: { en: "Could not read this photo", hi: "यह फ़ोटो पढ़ी नहीं जा सकी" },
+  wrongDocument: { en: "This looks like a different document. Upload the right one here.", hi: "यह कोई दूसरा दस्तावेज़ लगता है। यहाँ सही दस्तावेज़ अपलोड करें।" },
   kycTitle: { en: "Smart KYC", hi: "स्मार्ट KYC" },
   kycIntro: {
     en: "Upload 4 documents. We read them on your phone and check them against GST and Udyam records in seconds.",
@@ -107,6 +175,9 @@ export const STRINGS = {
 
   // Order / tracker
   orderPlaced: { en: "Order placed!", hi: "ऑर्डर हो गया!" },
+  somethingWrong: { en: "Something went wrong. Please try again.", hi: "कुछ गड़बड़ हुई। कृपया फिर से कोशिश करें।" },
+  aiBadge: { en: "AI", hi: "AI" },
+  advisorBadge: { en: "Advisor", hi: "सलाहकार" },
   orderId: { en: "Order ID", hi: "ऑर्डर ID" },
   trackOrder: { en: "Track my order", hi: "मेरा ऑर्डर ट्रैक करें" },
   trackerTitle: { en: "Your order", hi: "आपका ऑर्डर" },
@@ -120,11 +191,8 @@ export const STRINGS = {
   needHelp: { en: "Need help? One number for everything: 1800-000-0000", hi: "मदद चाहिए? सबके लिए एक नंबर: 1800-000-0000" },
 } as const;
 
-type Entry = { en: string; hi: string };
-
-export function tr(key: { [K in keyof typeof STRINGS]: (typeof STRINGS)[K] extends Entry ? K : never }[keyof typeof STRINGS], lang: Lang): string {
-  return (STRINGS[key] as Entry)[lang];
-}
+type Entry = Text;
+export type StringKey = keyof typeof STRINGS;
 
 export const NEED_LABELS: Record<string, Entry> = {
   billing: { en: "Billing & UPI", hi: "बिलिंग और UPI" },
@@ -166,4 +234,12 @@ export const BUSINESS_TYPE_HI: Record<string, string> = {
   "Plastic moulding unit": "प्लास्टिक मोल्डिंग यूनिट", "Printing press": "प्रिंटिंग प्रेस", "Furniture workshop": "फ़र्नीचर वर्कशॉप",
 };
 
-export const typeLabel = (t: string, lang: "en" | "hi") => (lang === "hi" ? BUSINESS_TYPE_HI[t] ?? t : t);
+/** Business type as a translatable Text (the English name is the key everywhere else). */
+export const typeText = (t: string): Text => ({ en: t, hi: BUSINESS_TYPE_HI[t] ?? t });
+
+export const SEGMENT_GROUP_LABEL: Record<"micro" | "prof" | "multi" | "mfg", Text> = {
+  micro: { en: "Shop or service", hi: "दुकान या सेवा" },
+  prof: { en: "Office or clinic", hi: "ऑफ़िस या क्लिनिक" },
+  multi: { en: "Chain with many outlets", hi: "कई आउटलेट वाली चेन" },
+  mfg: { en: "Factory or workshop", hi: "फ़ैक्ट्री या वर्कशॉप" },
+};

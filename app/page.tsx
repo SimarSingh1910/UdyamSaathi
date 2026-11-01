@@ -1,47 +1,42 @@
-import Link from "next/link";
+"use client";
 
-const steps = [
-  {
-    title: "Tell us about your business",
-    body: "Answer a few questions in English or Hindi. Our advisor recommends a bundle and explains why.",
-  },
-  {
-    title: "See one clear monthly price",
-    body: "Toggle add-ons on or off and watch the price update. No product codes, no hidden fees.",
-  },
-  {
-    title: "Finish KYC in minutes",
-    body: "We read your documents on your phone and check them against GST and Udyam records instantly.",
-  },
-  {
-    title: "Track your order",
-    body: "Check installation and activation status any time, without calling support.",
-  },
+import Link from "next/link";
+import { useI18n } from "@/components/I18nProvider";
+import LanguagePicker from "@/components/LanguagePicker";
+import type { StringKey } from "@/lib/i18n";
+
+const STEPS: [StringKey, StringKey][] = [
+  ["landing1Title", "landing1Body"],
+  ["landing2Title", "landing2Body"],
+  ["landing3Title", "landing3Body"],
+  ["landing4Title", "landing4Body"],
 ];
 
 export default function Home() {
+  const { t } = useI18n();
   return (
     <main>
-      <span className="badge">Accel Business</span>
-      <h1>Get your business online in one sitting</h1>
-      <p className="muted">
-        Internet, business SIMs, WhatsApp, cloud email, security and CCTV: one bundle, one bill,
-        one support number.
-      </p>
+      <header className="topbar">
+        <span className="badge">Accel Business</span>
+        <LanguagePicker />
+      </header>
+      <h1>{t("heroTitle")}</h1>
+      <p className="muted">{t("heroBody")}</p>
 
       <Link href="/start" className="btn btn-block">
-        Start now · अभी शुरू करें
+        {t("startNow")}
       </Link>
 
-      {steps.map((s, i) => (
-        <section className="card step" key={s.title}>
+      {STEPS.map(([title, body], i) => (
+        <section className="card step" key={title}>
           <span className="step-num">{i + 1}</span>
           <div>
-            <h2>{s.title}</h2>
-            <p className="muted">{s.body}</p>
+            <h2>{t(title)}</h2>
+            <p className="muted">{t(body)}</p>
           </div>
         </section>
       ))}
+      <p className="small muted">🌐 {t("languagesCount")}</p>
     </main>
   );
 }
