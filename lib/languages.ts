@@ -44,6 +44,37 @@ export const isAuthored = (code: LangCode) => code === "en" || code === "hi";
 /** Languages whose machine translation should be checked by a native speaker before launch. */
 export const NEEDS_REVIEW: LangCode[] = ["sat", "brx", "doi", "ks", "sd", "mni", "mai", "kok", "sa"];
 
+/** Unicode ranges of each script, used to reject translations in the wrong script. */
+const SCRIPT_RANGES: Record<string, RegExp> = {
+  Devanagari: /[\u0900-\u097F\uA8E0-\uA8FF]/u,
+  Bengali: /[\u0980-\u09FF]/u,
+  "Assamese (Bengali-Assamese)": /[\u0980-\u09FF]/u,
+  Telugu: /[\u0C00-\u0C7F]/u,
+  Tamil: /[\u0B80-\u0BFF]/u,
+  Gujarati: /[\u0A80-\u0AFF]/u,
+  Kannada: /[\u0C80-\u0CFF]/u,
+  Odia: /[\u0B00-\u0B7F]/u,
+  Malayalam: /[\u0D00-\u0D7F]/u,
+  Gurmukhi: /[\u0A00-\u0A7F]/u,
+  "Ol Chiki": /[\u1C50-\u1C7F]/u,
+  "Meitei Mayek": /[\uABC0-\uABFF\uAAE0-\uAAFF]/u,
+  "Perso-Arabic": /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/u,
+  "Perso-Arabic (Nastaliq)": /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/u,
+};
+
+/**
+ * True if a translation is written in the language's script: at least 90% of its
+ * non-Latin letters belong to it. Latin is allowed for brand and product names.
+ */
+export function inExpectedScript(code: LangCode, text: string): boolean {
+  const range = SCRIPT_RANGES[languageOf(code).script];
+  if (!range) return true;
+  const letters = [...text].filter((ch) => /[\p{L}\p{M}]/u.test(ch) && !/[A-Za-z]/.test(ch));
+  if (!letters.length) return true;
+  const ok = letters.filter((ch) => range.test(ch) || /\p{M}/u.test(ch)).length;
+  return ok / letters.length >= 0.9;
+}
+
 /** Locale for dates and numbers, falling back to Indian English when the browser lacks it. */
 export function dateLocale(code: LangCode): string {
   const wanted = `${code}-IN`;

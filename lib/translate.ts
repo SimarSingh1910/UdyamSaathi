@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { languageOf, type LangCode } from "./languages";
+import { inExpectedScript, languageOf, type LangCode } from "./languages";
 import { complete, llmEnabled, parseJsonReply } from "./llm";
 import { dataDir } from "./store";
 
@@ -64,7 +64,9 @@ async function translateChunk(lang: LangCode, texts: string[]): Promise<Dict> {
   if (!parsed) return out;
   texts.forEach((t, i) => {
     const v = parsed[String(i + 1)];
-    if (typeof v === "string" && v.trim()) out[t] = v.trim();
+    // Models sometimes drift into another script for rarer languages; drop those
+    // so the UI shows English instead of gibberish.
+    if (typeof v === "string" && v.trim() && inExpectedScript(lang, v)) out[t] = v.trim();
   });
   return out;
 }

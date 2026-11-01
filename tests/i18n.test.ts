@@ -54,3 +54,16 @@ describe("translation", () => {
     expect(await translate("en", ["Hello"])).toEqual({ Hello: "Hello" });
   });
 });
+
+describe("script check", async () => {
+  const { inExpectedScript } = await import("@/lib/languages");
+  it("keeps real translations and rejects wrong-script output", () => {
+    expect(inExpectedScript("ta", "உங்கள் வணிகம் GST பதிவு செய்யப்பட்டதா?")).toBe(true);
+    expect(inExpectedScript("ur", "ماہانہ کل")).toBe(true);
+    expect(inExpectedScript("mni", "ꯃꯟꯊꯔꯤ ꯊꯦꯟꯅꯤ")).toBe(true);
+    expect(inExpectedScript("sat", "ᱢᱚᱱᱛ ᱛᱚᱞᱞ")).toBe(true);
+    expect(inExpectedScript("sat", "ᄐBᄒEᄐ1ᄓ4")).toBe(false); // Hangul junk
+    expect(inExpectedScript("mni", "ଓଡ଼ିଆ ଲେଖା")).toBe(false); // Odia instead of Meitei Mayek
+    expect(inExpectedScript("bn", "KYC")).toBe(true); // brand names stay Latin
+  });
+});
