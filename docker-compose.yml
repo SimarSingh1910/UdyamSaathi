@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    image: udyamsaathi:latest
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      ADMIN_PASSCODE: ${ADMIN_PASSCODE:-accel-demo}
+    volumes:
+      - udyam-data:/app/.data
+    restart: unless-stopped
+
+volumes:
+  udyam-data:

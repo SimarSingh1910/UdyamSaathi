@@ -26,12 +26,32 @@ npm run dev        # http://localhost:3000
 npm test
 ```
 
+### With Docker
+
+```bash
+docker compose up --build    # http://localhost:3000
+```
+
+Orders, services and follow-ups are kept in a Docker volume (`udyam-data`), so they survive restarts. Settings come from `.env.local` if it exists.
+
 ## Screens
 
 | Route | What the owner does |
 | --- | --- |
 | `/start` | Chat with the advisor (English or Hindi), get a bundle, tune it on the quote screen, finish KYC, place the order |
-| `/track/:orderId` | Follow installation and activation without calling support |
+| `/track/:orderId` | Follow installation and activation without calling support; updates live as Accel works on the order |
+
+## Accel back office (`/admin`)
+
+Sign in with `ADMIN_PASSCODE` (default `accel-demo`).
+
+| Page | What Accel staff do |
+| --- | --- |
+| Orders | See every customer's order and status, filter by stage, book installation (date and engineer), update each product, add notes the customer sees, cancel. Headline metrics sit next to the Apr–Jun baseline |
+| Leads & requests | Owners who asked for help during KYC, plus leads that dropped out last quarter ranked by a lead score; assign to a partner and record the outcome |
+| Services | Add, edit, hide or delete products, prices and eligibility rules; the advisor and quote use the change straight away |
+
+Phone numbers are masked in the back office; revealing one is written to the order's history.
 
 ## API
 
@@ -49,7 +69,9 @@ npm test
 
 - **Advisor**: recommendations come from deterministic rules grounded in what the 368 activated leads bought per segment, so the same answers always give the same bundle. The LLM only does what it is good at: understanding free text and explaining the bundle in the owner's language. Prices always come from the quote engine, never from the model.
 - **Smart KYC**: documents are read on the phone with tesseract.js (engine and language data are self-hosted). Only the extracted text goes to the server, where it is matched against the GST and Udyam registries and across documents. On the 12 specimen applicants it catches a cancelled GSTIN, unreadable photos, a missing Udyam certificate, a missing Udyam number, GSTINs that fail the checksum, an edited legal name and an address proof older than 90 days.
-- **Tracker**: the timeline is derived from each product's typical install days. A demo switch runs one day every 5 seconds.
+- **Orders and tracker**: orders are priced again on the server (the client's numbers are never trusted) and stored with an event log. Every change Accel makes is an event, and the owner's tracker polls for them.
+- **Lead score**: a logistic regression trained on the quarter's leads at start-up (about half a second). On held-out leads it reaches an AUC of 0.72; the top 10% it ranks convert at about twice the average rate. Each score comes with the two factors that raised it most.
+- **Storage**: a JSON file behind a small store module (`lib/store.ts`). Everything goes through that module, so it can move to Postgres without touching routes or screens.
 
 ## LLM
 
