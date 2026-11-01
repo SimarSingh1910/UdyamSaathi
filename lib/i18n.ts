@@ -94,13 +94,27 @@ export const STRINGS = {
     hi: "हो गया। आपके पास का पार्टनर 4 कामकाजी घंटों में कॉल करके दस्तावेज़ों में मदद करेगा।",
   },
 
+  contactTitle: { en: "Who should we contact about installation?", hi: "इंस्टॉलेशन के लिए किससे संपर्क करें?" },
+  contactName: { en: "Name", hi: "नाम" },
+  mobile: { en: "Mobile number", hi: "मोबाइल नंबर" },
+  invalidMobile: { en: "Enter a valid 10-digit mobile number", hi: "सही 10 अंकों का मोबाइल नंबर डालें" },
+  contactUse: {
+    en: "Used only for installation updates and support for this order.",
+    hi: "सिर्फ़ इस ऑर्डर के इंस्टॉलेशन अपडेट और सपोर्ट के लिए।",
+  },
+  helpTitle: { en: "A partner near you will call to help", hi: "आपके पास का पार्टनर मदद के लिए कॉल करेगा" },
+  requestHelp: { en: "Request a call", hi: "कॉल का अनुरोध करें" },
+
   // Order / tracker
   orderPlaced: { en: "Order placed!", hi: "ऑर्डर हो गया!" },
   orderId: { en: "Order ID", hi: "ऑर्डर ID" },
   trackOrder: { en: "Track my order", hi: "मेरा ऑर्डर ट्रैक करें" },
   trackerTitle: { en: "Your order", hi: "आपका ऑर्डर" },
   noOrder: { en: "We couldn't find this order on this phone.", hi: "यह ऑर्डर इस फ़ोन पर नहीं मिला।" },
-  demoSpeed: { en: "Demo: 1 day = 5 seconds", hi: "डेमो: 1 दिन = 5 सेकंड" },
+  installSlot: { en: "Installation", hi: "इंस्टॉलेशन" },
+  engineer: { en: "Engineer", hi: "इंजीनियर" },
+  updates: { en: "Updates", hi: "अपडेट" },
+  liveNote: { en: "Updates automatically as our team works on your order.", hi: "हमारी टीम के काम करते ही यह अपने आप अपडेट होता है।" },
   expected: { en: "Expected", hi: "अपेक्षित" },
   activatedOn: { en: "Fully active by", hi: "पूरी तरह चालू" },
   needHelp: { en: "Need help? One number for everything: 1800-000-0000", hi: "मदद चाहिए? सबके लिए एक नंबर: 1800-000-0000" },

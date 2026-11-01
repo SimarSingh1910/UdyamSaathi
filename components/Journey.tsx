@@ -5,13 +5,13 @@ import { useCallback, useState } from "react";
 import type { AdvisorAnswers, Lang, Recommendation } from "@/lib/advisor";
 import type { Product } from "@/lib/catalogue";
 import { STRINGS, formatInr, tr } from "@/lib/i18n";
-import { newOrderId, saveOrder, type Order } from "@/lib/orders";
 import type { Quote } from "@/lib/quote";
 import Advisor from "./Advisor";
+import ContactForm from "./ContactForm";
 import Kyc, { type KycOutcome } from "./Kyc";
 import QuoteView, { type CartLine } from "./QuoteView";
 
-type Step = "advisor" | "recommendation" | "quote" | "kyc" | "done";
+type Step = "advisor" | "recommendation" | "quote" | "kyc" | "contact" | "done";
 
 interface RecResponse {
   recommendation: Recommendation;
@@ -27,12 +27,15 @@ export default function Journey() {
   const [rec, setRec] = useState<RecResponse | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [kyc, setKyc] = useState<KycOutcome | null>(null);
-  const [order, setOrder] = useState<Order | null>(null);
+  const [answers, setAnswers] = useState<AdvisorAnswers | null>(null);
+  const [order, setOrder] = useState<{ id: string; monthlyTotal: number; days: number } | null>(null);
+  const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onAdvisorDone = useCallback(
     async (answers: AdvisorAnswers) => {
       setError(null);
+      setAnswers(answers);
       try {
         const res = await fetch("/api/advisor/recommend", {
           method: "POST",
@@ -69,29 +72,45 @@ export default function Journey() {
     setRec({ ...rec, recommendation: { ...rec.recommendation, profile: { ...rec.recommendation.profile, hasActiveGstin: false } } });
   }
 
-  async function placeOrder() {
+  async function placeOrder(contact: { name: string; phone: string }) {
     if (!rec) return;
-    const items = cart.filter((l) => l.on && l.quantity > 0).map(({ productId, quantity }) => ({ productId, quantity }));
-    const quote: Quote = await (
-      await fetch("/api/quote", {
+    setPlacing(true);
+    setError(null);
+    try {
+      const items = cart.filter((l) => l.on && l.quantity > 0).map(({ productId, quantity }) => ({ productId, quantity }));
+      const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ profile: rec.recommendation.profile, items }),
-      })
-    ).json();
-    const o: Order = {
-      id: newOrderId(),
-      createdAt: Date.now(),
-      businessName: kyc?.result.business?.tradeName ?? "",
-      lines: quote.lines.map(({ productId, name, quantity, installDays }) => ({ productId, name, quantity, installDays })),
-      monthlyTotal: quote.monthlyTotal,
-      setupTotal: quote.setupTotal,
-      contractMonths: quote.contractMonths,
-      expectedActivationDays: quote.expectedActivationDays,
-    };
-    saveOrder(o);
-    setOrder(o);
-    setStep("done");
+        body: JSON.stringify({
+          lang,
+          answers,
+          profile: rec.recommendation.profile,
+          items,
+          business: {
+            tradeName: kyc?.result.business?.tradeName,
+            legalName: kyc?.result.business?.legalName,
+            gstinMasked: kyc?.result.extracted?.gstin,
+          },
+          contact,
+          kycApproved: kyc?.canOrder === true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Order failed");
+      const q = await (
+        await fetch("/api/quote", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ profile: rec.recommendation.profile, items }),
+        })
+      ).json();
+      setOrder({ id: data.id, monthlyTotal: q.monthlyTotal, days: q.expectedActivationDays });
+      setStep("done");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setPlacing(false);
+    }
   }
 
   function restart() {
@@ -99,11 +118,12 @@ export default function Journey() {
     setCart([]);
     setKyc(null);
     setOrder(null);
+    setAnswers(null);
     setAdvisorKey((k) => k + 1);
     setStep("advisor");
   }
 
-  const stepIndex = { advisor: 0, recommendation: 0, quote: 1, kyc: 2, done: 3 }[step];
+  const stepIndex = { advisor: 0, recommendation: 0, quote: 1, kyc: 2, contact: 2, done: 3 }[step];
 
   return (
     <main>
@@ -179,7 +199,24 @@ export default function Journey() {
       )}
 
       {step === "kyc" && (
-        <Kyc lang={lang} onResult={onKycResult} onPlaceOrder={placeOrder} onBack={() => setStep("quote")} />
+        <Kyc
+          lang={lang}
+          business={{ businessType: answers?.businessType, city: answers?.city }}
+          onResult={onKycResult}
+          onPlaceOrder={() => setStep("contact")}
+          onBack={() => setStep("quote")}
+        />
+      )}
+
+      {step === "contact" && (
+        <ContactForm
+          lang={lang}
+          title={tr("contactTitle", lang)}
+          submitLabel={tr("placeOrder", lang)}
+          defaultName={kyc?.result.extracted?.signatory ?? ""}
+          busy={placing}
+          onSubmit={placeOrder}
+        />
       )}
 
       {step === "done" && order && (
@@ -192,7 +229,7 @@ export default function Journey() {
             {tr("monthlyTotal", lang)}: <b>{formatInr(order.monthlyTotal)}</b> {tr("inclGst", lang)}
           </p>
           <p>
-            {tr("readyIn", lang)} <b>{order.expectedActivationDays} {tr("days", lang)}</b>
+            {tr("readyIn", lang)} <b>{order.days} {tr("days", lang)}</b>
           </p>
           <Link className="btn" href={`/track/${order.id}`}>
             {tr("trackOrder", lang)}
