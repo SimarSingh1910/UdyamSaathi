@@ -115,11 +115,14 @@ export function parseByKeywords(message: string, context?: string): PartialAnswe
   if (/hotspot|phone.?(?:ka|se)? internet|मोबाइल.*इंटरनेट|हॉटस्पॉट/i.test(text)) out.currentInternet = "Mobile hotspot";
   else if (/home broadband|home wifi|घर का/i.test(text)) out.currentInternet = "Home broadband";
   else if (/leased line/i.test(text)) out.currentInternet = "Leased line";
-  else if (/broadband|fibre|fiber/i.test(text)) out.currentInternet = "Business broadband";
+  else if (/business broadband|(use|have|got|hai|है).{0,15}(broadband|fibre|fiber)|(broadband|fibre|fiber).{0,10}(hai|है|connection)/i.test(text))
+    out.currentInternet = "Business broadband";
   else if (/no internet|इंटरनेट नहीं/i.test(text)) out.currentInternet = "None";
 
-  if (/\bno gst|without gst|gst nahi|gst नहीं|not registered/i.test(text)) out.hasGstin = false;
-  else if (/gst|जीएसटी/i.test(text)) out.hasGstin = true;
+  // Only a clear statement counts: "kya GST ke bina milega?" is a question, not an answer.
+  if (/\bno gst|gst nahi hai|gst नहीं है|not gst registered|not registered (for|under) gst/i.test(text)) out.hasGstin = false;
+  else if (/(have|got|has|registered|hamare paas|मेरे पास|हमारे पास).{0,12}(gst|जीएसटी)|(gst|जीएसटी).{0,12}(registered|number|नंबर|रजिस्टर्ड|hai|है)(?!\s*\?)/i.test(text) && !/\?\s*$/.test(text.trim()))
+    out.hasGstin = true;
 
   const needs = NEED_KEYWORDS.filter(([re]) => re.test(text)).map(([, n]) => n);
   if (needs.length) out.needs = [...new Set(needs)];

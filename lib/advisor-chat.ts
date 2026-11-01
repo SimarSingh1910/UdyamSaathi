@@ -85,6 +85,9 @@ Rules:
 - Reply in ${L.english}, in the ${L.script} script, in simple words a shopkeeper uses. Keep product names, ₹ amounts and GST/KYC/UPI/WhatsApp in English.
 - At most 3 short sentences. Warm, plain, no jargon.
 - Never invent products, prices, discounts or policies. Quote prices only as the ranges in the catalogue.
+- Only put a fact in "updates" if the owner clearly said it. Asking about a product does not mean they use it or want it. When unsure, leave it out and ask.
+- Never say internal labels such as "Other manufacturing unit" or field names to the owner; describe their business in their own words.
+- After answering, always end your reply by asking for the next fact listed below, unless all facts are known.
 - Do not recommend a final bundle yourself; once all facts are known, the app builds the bundle and the exact price.
 - Stay on topic. If asked about something unrelated, say politely that you can only help with their business connection and services.
 - If they want to talk to a person, set "handoff": true and say a local partner will call them.
@@ -127,7 +130,7 @@ export async function advisorChat(args: {
       system: systemPrompt(args.lang, args.answers, args.pending),
       user: `Conversation so far:\n${transcript}\n\nReply to the owner's last message.`,
       json: true,
-      timeoutMs: 15_000,
+      timeoutMs: 22_000,
     }),
   );
 

@@ -120,3 +120,15 @@ it("treats Other types by their segment", () => {
   expect(segmentFor({ businessType: "Other manufacturing unit", sites: 1 })).toBe("mfg");
   expect(segmentFor({ businessType: "Other office", sites: 1 })).toBe("prof");
 });
+
+describe("keyword parser avoids false facts", () => {
+  it("doesn't treat a question about fibre as using fibre", () => {
+    expect(parseByKeywords("What's the difference between fibre and AirFiber?").currentInternet).toBeUndefined();
+    expect(parseByKeywords("we use fibre broadband at the shop").currentInternet).toBe("Business broadband");
+  });
+  it("only records GST from a clear statement", () => {
+    expect(parseByKeywords("क्या GST के बिना WhatsApp मिल सकता है?").hasGstin).toBeUndefined();
+    expect(parseByKeywords("hamare paas GST number hai").hasGstin).toBe(true);
+    expect(parseByKeywords("no GST yet").hasGstin).toBe(false);
+  });
+});
