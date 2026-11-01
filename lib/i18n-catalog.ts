@@ -1,5 +1,5 @@
-import { BUSINESS_TYPES, SEGMENT_LABELS } from "./advisor";
-import { INTERNET_LABELS, NEED_LABELS, SEGMENT_GROUP_LABEL, STRINGS, typeText, type Text } from "./i18n";
+import { BUSINESS_TYPES, CITY_TIERS, SEGMENT_LABELS } from "./advisor";
+import { INTERNET_LABELS, NEED_LABELS, SEGMENT_GROUP_LABEL, STRINGS, cityText, typeText, type Text } from "./i18n";
 import { LINE_LABEL, STATUS_LABEL } from "./order-flow";
 
 /** Every fixed piece of customer-facing copy. Translated once per language and saved. */
@@ -13,6 +13,7 @@ export function catalog(): Text[] {
     ...Object.values(STATUS_LABEL),
     ...Object.values(LINE_LABEL),
     ...Object.values(BUSINESS_TYPES).flat().map(typeText),
+    ...Object.keys(CITY_TIERS).map(cityText),
   ];
   const seen = new Set<string>();
   return all.filter((t) => (seen.has(t.en) ? false : (seen.add(t.en), true)));

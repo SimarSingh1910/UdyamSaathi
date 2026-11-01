@@ -10,7 +10,7 @@ import {
   type CurrentInternet,
   type Need,
 } from "@/lib/advisor";
-import { INTERNET_LABELS, NEED_LABELS, SEGMENT_GROUP_LABEL, typeText, type StringKey } from "@/lib/i18n";
+import { INTERNET_LABELS, NEED_LABELS, SEGMENT_GROUP_LABEL, cityText, typeText, type StringKey } from "@/lib/i18n";
 import { useI18n } from "./I18nProvider";
 
 type Question = "businessType" | "city" | "employees" | "sites" | "currentInternet" | "needs" | "hasGstin";
@@ -151,7 +151,7 @@ export default function Advisor({ onDone }: Props) {
       case "city":
         return (
           <div className="chips">
-            {Object.keys(CITY_TIERS).map((c) => chip(c, () => answer("city", c, c)))}
+            {Object.keys(CITY_TIERS).map((c) => chip(tt(cityText(c)), () => answer("city", c, tt(cityText(c)))))}
             {chip(t("otherCity"), () => answer("city", "Other", t("otherCity")))}
           </div>
         );

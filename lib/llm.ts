@@ -37,6 +37,20 @@ async function pickAvailableModel(base: string, key: string, signal: AbortSignal
   return PREFERRED.find((m) => chat.includes(m)) ?? chat[0] ?? null;
 }
 
+/**
+ * fetch that waits and retries when the provider says "too many requests" (429),
+ * honouring Retry-After up to 20 seconds. Free tiers hit this often.
+ */
+async function fetchWithRetry(url: string, init: RequestInit, retries = 2): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, init);
+    if (res.status !== 429 || attempt >= retries) return res;
+    const after = Number(res.headers.get("retry-after"));
+    const waitMs = Math.min(20_000, Number.isFinite(after) && after > 0 ? after * 1000 : 4000 * (attempt + 1));
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
+}
+
 interface CompleteArgs {
   system: string;
   user: string;
@@ -54,7 +68,7 @@ export async function complete(args: CompleteArgs): Promise<string | null> {
 
   try {
     if (cfg.provider === "gemini") {
-      const res = await fetch(
+      const res = await fetchWithRetry(
         `https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent`,
         {
           method: "POST",
@@ -79,7 +93,7 @@ export async function complete(args: CompleteArgs): Promise<string | null> {
       // Groq serves an OpenAI-compatible API.
       const base = cfg.provider === "groq" ? "https://api.groq.com/openai/v1" : "https://api.openai.com/v1";
       const call = (model: string) =>
-        fetch(`${base}/chat/completions`, {
+        fetchWithRetry(`${base}/chat/completions`, {
           method: "POST",
           signal: ctrl.signal,
           headers: { "content-type": "application/json", authorization: `Bearer ${cfg.key}` },
@@ -110,7 +124,7 @@ export async function complete(args: CompleteArgs): Promise<string | null> {
       return data?.choices?.[0]?.message?.content ?? null;
     }
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetchWithRetry("https://api.anthropic.com/v1/messages", {
       method: "POST",
       signal: ctrl.signal,
       headers: {

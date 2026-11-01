@@ -237,6 +237,16 @@ export const BUSINESS_TYPE_HI: Record<string, string> = {
 /** Business type as a translatable Text (the English name is the key everywhere else). */
 export const typeText = (t: string): Text => ({ en: t, hi: BUSINESS_TYPE_HI[t] ?? t });
 
+const CITY_HI: Record<string, string> = {
+  Delhi: "दिल्ली", Mumbai: "मुंबई", Bengaluru: "बेंगलुरु", Hyderabad: "हैदराबाद", Chennai: "चेन्नई", Pune: "पुणे",
+  Kolkata: "कोलकाता", Ahmedabad: "अहमदाबाद", Vadodara: "वडोदरा", Kochi: "कोच्चि", Ludhiana: "लुधियाना", Indore: "इंदौर",
+  Nagpur: "नागपुर", Lucknow: "लखनऊ", Bhopal: "भोपाल", Jaipur: "जयपुर", Mysuru: "मैसूरु", Coimbatore: "कोयंबटूर",
+  Nashik: "नासिक", Visakhapatnam: "विशाखापत्तनम", Patna: "पटना", Surat: "सूरत",
+};
+
+/** City name as a translatable Text (stored in English everywhere else). */
+export const cityText = (c: string): Text => ({ en: c, hi: CITY_HI[c] ?? c });
+
 export const SEGMENT_GROUP_LABEL: Record<"micro" | "prof" | "multi" | "mfg", Text> = {
   micro: { en: "Shop or service", hi: "दुकान या सेवा" },
   prof: { en: "Office or clinic", hi: "ऑफ़िस या क्लिनिक" },
