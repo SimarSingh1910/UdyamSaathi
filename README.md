@@ -1,3 +1,16 @@
+## 🚀 Live Demo
+
+**[Open UdyamSaathi →](https://udyamsaathi-jl5n.onrender.com/start)**
+
+Deployed on Render. Explore the Advisor, Quote and Smart KYC onboarding experience.
+
+## 👥 Team Outliers
+
+- Shreyash Gupta
+- Gursimar Chauhan
+
+**Netaji Subhas University of Technology (NSUT)**
+
 # UdyamSaathi
 
 A digital-first acquisition and onboarding journey that lets a small business owner discover the right Accel Business bundle, buy it and get it activated, on a phone and in their preferred language.
