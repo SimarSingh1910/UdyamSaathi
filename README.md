@@ -1,6 +1,6 @@
 ## 🚀 Live Demo
 
-**[Open UdyamSaathi →](https://udyamsaathi-jl5n.onrender.com/start)**
+**[Open UdyamSaathi →](https://udyamsaathi-jl5n.onrender.com/)**
 
 Deployed on Render. Explore the Advisor, Quote and Smart KYC onboarding experience.
 
