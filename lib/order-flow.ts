@@ -61,14 +61,19 @@ export function applyLineStatus(o: Order, productId: string, status: LineStatus,
   }
 }
 
-export function scheduleInstall(o: Order, date: string, engineer: string, by: OrderEvent["by"]) {
+export function scheduleInstall(o: Order, date: string, engineer: string, by: OrderEvent["by"], engineerId = "") {
   o.installSlot = date;
   o.engineer = engineer || undefined;
-  const when = new Date(`${date}T00:00:00+05:30`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-  const whenHi = new Date(`${date}T00:00:00+05:30`).toLocaleDateString("hi-IN", { day: "numeric", month: "short" });
+  o.engineerId = engineerId || undefined;
+  const idEn = engineerId ? ` (ID ${engineerId})` : "";
+  const idHi = engineerId ? ` (आईडी ${engineerId})` : "";
+  // Format in India time: the server may run on UTC, where IST midnight is still the day before.
+  const day = new Date(`${date}T00:00:00+05:30`);
+  const when = day.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+  const whenHi = day.toLocaleDateString("hi-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
   const note = {
-    en: `Installation booked for ${when}${engineer ? ` with ${engineer}` : ""}`,
-    hi: `इंस्टॉलेशन ${whenHi} को${engineer ? `, इंजीनियर ${engineer}` : ""}`,
+    en: `Installation booked for ${when}${engineer ? ` with ${engineer}${idEn}` : ""}`,
+    hi: `इंस्टॉलेशन ${whenHi} को${engineer ? `, इंजीनियर ${engineer}${idHi}` : ""}`,
   };
   if (STATUS_FLOW.indexOf(o.status) < STATUS_FLOW.indexOf("scheduled")) applyStatus(o, "scheduled", by, note);
   else o.events.push(event(undefined, note, by));

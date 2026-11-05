@@ -236,6 +236,7 @@ export const STRINGS = {
   noOrder: { en: "We couldn't find this order on this phone.", hi: "यह ऑर्डर इस फ़ोन पर नहीं मिला।" },
   installSlot: { en: "Installation", hi: "इंस्टॉलेशन" },
   engineer: { en: "Engineer", hi: "इंजीनियर" },
+  engineerId: { en: "ID", hi: "आईडी" },
   updates: { en: "Updates", hi: "अपडेट" },
   liveNote: { en: "Updates automatically as our team works on your order.", hi: "हमारी टीम के काम करते ही यह अपने आप अपडेट होता है।" },
   expected: { en: "Expected", hi: "अपेक्षित" },

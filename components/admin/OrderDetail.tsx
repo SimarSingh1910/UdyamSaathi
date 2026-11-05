@@ -15,6 +15,7 @@ export default function OrderDetail({ id }: { id: string }) {
   const [error, setError] = useState("");
   const [date, setDate] = useState(tomorrow());
   const [engineer, setEngineer] = useState("");
+  const [engineerId, setEngineerId] = useState("");
   const [note, setNote] = useState("");
   const [phone, setPhone] = useState<string | null>(null);
 
@@ -22,6 +23,15 @@ export default function OrderDetail({ id }: { id: string }) {
   useEffect(() => {
     load().catch((e) => setError(e.message));
   }, [load]);
+  // Start the booking form from what is already booked, so rebooking only changes what's needed.
+  const booked = order ? `${order.installSlot ?? ""}|${order.engineer ?? ""}|${order.engineerId ?? ""}` : "";
+  useEffect(() => {
+    if (!order) return;
+    if (order.installSlot) setDate(order.installSlot);
+    setEngineer(order.engineer ?? "");
+    setEngineerId(order.engineerId ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booked]);
 
   async function act(body: Record<string, unknown>) {
     setError("");
@@ -113,14 +123,25 @@ export default function OrderDetail({ id }: { id: string }) {
                   Engineer
                   <input value={engineer} onChange={(e) => setEngineer(e.target.value)} placeholder="e.g. Ravi Kumar" />
                 </label>
+                <label>
+                  Engineer ID
+                  <input
+                    value={engineerId}
+                    onChange={(e) => setEngineerId(e.target.value.toUpperCase())}
+                    placeholder="e.g. ENG-1042"
+                    maxLength={20}
+                    size={12}
+                  />
+                </label>
               </div>
-              <button className="btn btn-small" onClick={() => act({ action: "schedule", date, engineer })}>
+              <button className="btn btn-small" onClick={() => act({ action: "schedule", date, engineer, engineerId })}>
                 Book &amp; notify customer
               </button>
               {order.installSlot && (
                 <p className="small muted">
                   Booked: {order.installSlot}
                   {order.engineer && ` · ${order.engineer}`}
+                  {order.engineerId && ` (ID ${order.engineerId})`}
                 </p>
               )}
             </div>

@@ -85,6 +85,8 @@ export interface Order {
   expectedActivationDays: number;
   installSlot?: string;
   engineer?: string;
+  /** Staff ID the customer can check when the engineer arrives. */
+  engineerId?: string;
   events: OrderEvent[];
 }
 

@@ -18,7 +18,7 @@ type Action =
   | { action: "advance" }
   | { action: "status"; status: OrderStatus }
   | { action: "line"; productId: string; status: LineStatus }
-  | { action: "schedule"; date: string; engineer?: string }
+  | { action: "schedule"; date: string; engineer?: string; engineerId?: string }
   | { action: "note"; text: string }
   | { action: "cancel"; reason?: string }
   | { action: "reveal_phone" };
@@ -73,7 +73,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         break;
       case "schedule":
         if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date ?? "")) error = "date must be YYYY-MM-DD";
-        else scheduleInstall(o, body.date, (body.engineer ?? "").slice(0, 60), "accel");
+        else {
+          // Staff IDs are letters, digits and dashes, e.g. ENG-1042.
+          const engineerId = (body.engineerId ?? "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
+          scheduleInstall(o, body.date, (body.engineer ?? "").trim().slice(0, 60), "accel", engineerId);
+        }
         break;
       case "note": {
         const text = (body.text ?? "").trim().slice(0, 500);

@@ -97,6 +97,7 @@ function sampleOrder(s: SampleOrder, catalogue: ReturnType<typeof productFromRow
     expectedActivationDays: quote.expectedActivationDays,
     installSlot: s.engineer ? new Date(created + 2 * DAY).toISOString().slice(0, 10) : undefined,
     engineer: s.engineer,
+    engineerId: s.engineer ? `ENG-${s.id.slice(-4)}` : undefined,
     events,
   };
 }

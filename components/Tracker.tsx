@@ -79,6 +79,9 @@ export default function Tracker({ id }: { id: string }) {
   const cancelled = order.status === "cancelled";
   const reachedAt = (s: string) => order.events.find((e) => e.status === s)?.at;
   const currentIdx = STATUS_FLOW.indexOf(order.status);
+  // Stages before the current one are complete; so is the last one once it is reached.
+  const stage = (i: number) =>
+    i < currentIdx || (i === currentIdx && i === STATUS_FLOW.length - 1) ? "done" : i === currentIdx ? "now" : "todo";
   const plan = expectedDays(order);
 
   return (
@@ -100,18 +103,20 @@ export default function Tracker({ id }: { id: string }) {
             {STATUS_FLOW.map((s, i) => {
               const at = reachedAt(s);
               const expected = order.createdAt + plan[s] * DAY_MS;
+              const state = stage(i);
               return (
-                <li key={s} className={i < currentIdx ? "done" : i === currentIdx ? "now" : ""}>
+                <li key={s} className={state}>
                   <span className="dot" />
                   <div>
                     <b>{tt(STATUS_LABEL[s])}</b>
                     <p className="small muted">
-                      {at ? `✓ ${fmtTime(at)}` : `${t("expected")} ${fmt(expected)}`}
+                      {at ? `✓ ${fmtTime(at)}` : state === "done" ? `✓ ${t("stepDone")}` : `${t("expected")} ${fmt(expected)}`}
                     </p>
                     {s === "scheduled" && order.installSlot && (
                       <p className="small">
                         📅 {fmt(new Date(`${order.installSlot}T00:00:00+05:30`).getTime())}
                         {order.engineer && ` · ${t("engineer")}: ${order.engineer}`}
+                        {order.engineerId && ` · ${t("engineerId")} ${order.engineerId}`}
                       </p>
                     )}
                   </div>

@@ -146,3 +146,14 @@ describe("back-office auth", () => {
     expect(isAdmin(new Request("http://x"))).toBe(false);
   });
 });
+
+describe("engineer ID", () => {
+  it("is saved with the booking and shown in the customer's update", async () => {
+    const o = sampleOrder("UDS-100777");
+    await createOrder(o);
+    const saved = await updateOrder(o.id, (x) => scheduleInstall(x, "2026-11-12", "Ravi Teja", "accel", "ENG-1042"));
+    expect(saved).toMatchObject({ engineer: "Ravi Teja", engineerId: "ENG-1042", installSlot: "2026-11-12", status: "scheduled" });
+    expect(saved?.events.at(-1)?.note.en).toBe("Installation booked for 12 Nov with Ravi Teja (ID ENG-1042)");
+    expect((await getOrder(o.id))?.engineerId).toBe("ENG-1042");
+  });
+});

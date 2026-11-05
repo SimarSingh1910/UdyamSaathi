@@ -51,6 +51,7 @@ export const orders = pgTable(
     expectedActivationDays: integer("expected_activation_days").notNull(),
     installSlot: text("install_slot"),
     engineer: text("engineer"),
+    engineerId: text("engineer_id"),
   },
   (t) => [index("orders_created_at_idx").on(t.createdAt), index("orders_status_idx").on(t.status)],
 );

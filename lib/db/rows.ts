@@ -55,6 +55,7 @@ export const orderFromRow = (r: Row<typeof orders>): Order => ({
   expectedActivationDays: r.expectedActivationDays,
   installSlot: opt(r.installSlot),
   engineer: opt(r.engineer),
+  engineerId: opt(r.engineerId),
 });
 
 export const orderToRow = (o: Order): NewRow<typeof orders> => ({
@@ -75,6 +76,7 @@ export const orderToRow = (o: Order): NewRow<typeof orders> => ({
   expectedActivationDays: o.expectedActivationDays,
   installSlot: o.installSlot ?? null,
   engineer: o.engineer ?? null,
+  engineerId: o.engineerId ?? null,
 });
 
 export const requestFromRow = (r: Row<typeof helpRequests>): HelpRequest => ({
