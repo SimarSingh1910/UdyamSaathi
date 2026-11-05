@@ -232,6 +232,21 @@ describe("2Factor delivery", () => {
     expect(urls[1]).toMatch(/\/VOICE\/919700000012\/\d{6}$/);
   });
 
+  it("accepts the fixed demo code next to the real one, on a demo site only", async () => {
+    mock2Factor({ Status: "Success", Details: "session-1" });
+    const off = await startVerification({ phone: "9700000014", method: "voice" });
+    if (!off.ok) throw new Error(off.error);
+    expect(off.fixedCode).toBeUndefined();
+    expect(await checkCode(off.id, "123456")).toMatchObject({ ok: false, error: "wrong_code" });
+
+    process.env.DEMO_MODE = "1";
+    onTestFinished(() => void (process.env.DEMO_MODE = "0"));
+    const on = await startVerification({ phone: "9700000015", method: "voice" });
+    if (!on.ok) throw new Error(on.error);
+    expect(on.fixedCode).toBe("123456");
+    expect(await checkCode(on.id, "123 456")).toMatchObject({ ok: true });
+  });
+
   it("reports a refused send without counting it against the number", async () => {
     mock2Factor({ Status: "Error", Details: "Invalid API Key" });
     for (let i = 0; i < 4; i++) {

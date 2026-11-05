@@ -11,3 +11,5 @@ process.env.UDYAM_STORE_PATH = path.join(dir, "store.json");
 // from the CSVs, never a server from the environment.
 delete process.env.DATABASE_URL;
 process.env.PGLITE_DIR = "memory";
+// No sample orders or fixed phone code unless a test turns demo mode on.
+process.env.DEMO_MODE = "0";

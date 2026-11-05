@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdmin, unauthorized } from "@/lib/auth";
-import { modelSummary, scoredLeads } from "@/lib/leads";
+import { leadFormOptions, modelSummary, newLeadRow, scoredLeads } from "@/lib/leads";
+import { addLead } from "@/lib/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,5 +38,21 @@ export async function GET(req: NextRequest) {
       cities: [...new Set(all.map((l) => l.city))].sort(),
       stages: [...new Set(all.map((l) => l.stageReached))],
     },
+    options: leadFormOptions(),
   });
+}
+
+/**
+ * POST /api/admin/leads { businessName, businessType, city, contactName, phone?, language?, source?,
+ *   employees?, sites?, hasGstin?, hasUdyam?, currentInternet?, telecomSpend?, turnover?, note? }
+ * Adds a lead found by staff; it is scored by the same model as the dataset's leads.
+ */
+export async function POST(req: Request) {
+  if (!isAdmin(req)) return unauthorized();
+  const body = await req.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Body must be JSON" }, { status: 400 });
+  const r = newLeadRow(body);
+  if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 });
+  const lead = await addLead(r.row, r.phone);
+  return NextResponse.json({ id: lead.id }, { status: 201 });
 }

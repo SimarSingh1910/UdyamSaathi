@@ -9,10 +9,10 @@ import { loadDataset } from "./data";
 
 type Row = Record<string, string>;
 
-const SEGMENTS = ["Micro retail & services", "Professional offices", "Small multi-site businesses", "Small manufacturers"];
-const SOURCES = ["Field sales", "Website form", "Channel partner", "Inbound call", "Referral", "WhatsApp campaign"];
-const INTERNET = ["Mobile hotspot", "Home broadband", "Business broadband", "Leased line", "Mixed per site", "None"];
-const TURNOVER = ["< 40 lakh", "40 lakh - 1.5 cr", "1.5 - 5 cr", "5 - 25 cr", "25 - 100 cr"];
+export const SEGMENTS = ["Micro retail & services", "Professional offices", "Small multi-site businesses", "Small manufacturers"];
+export const SOURCES = ["Field sales", "Website form", "Channel partner", "Inbound call", "Referral", "WhatsApp campaign"];
+export const INTERNET = ["Mobile hotspot", "Home broadband", "Business broadband", "Leased line", "Mixed per site", "None"];
+export const TURNOVER = ["< 40 lakh", "40 lakh - 1.5 cr", "1.5 - 5 cr", "5 - 25 cr", "25 - 100 cr"];
 
 /** Human-readable name for each feature, used to explain a score. */
 export const FEATURE_NAMES: string[] = [

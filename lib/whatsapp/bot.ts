@@ -819,10 +819,10 @@ async function startPhoneCheck(chat: Chat, method: VerifyMethod): Promise<void> 
     return askMethod(chat);
   }
   s.verificationId = r.id;
-  const vars = { phone: fmtPhone(phone), number: r.callNumber ?? "", code: r.demoCode ?? "" };
+  const vars = { phone: fmtPhone(phone), number: r.callNumber ?? "", code: r.demoCode ?? r.fixedCode ?? "" };
   if (method !== "missed_call") {
     s.step = "phone_code";
-    const text = [await chat.t(CODE_SENT[method], vars), ...(r.demoCode ? [await chat.t(WA.demoCode, vars)] : [])].join("\n\n");
+    const text = [await chat.t(CODE_SENT[method], vars), ...(r.demoCode ? [await chat.t(WA.demoCode, vars)] : r.fixedCode ? [await chat.t(WA.demoFixedCode, vars)] : [])].join("\n\n");
     return chat.buttons(text, [["verify:change", WA.changeMethod]]);
   }
   s.step = "phone_missed";

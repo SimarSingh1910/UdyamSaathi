@@ -174,6 +174,9 @@ export default function Journey() {
         <Link href="/" className="brand">
           {t("appName")}
         </Link>
+        <Link href="/" className="home-link">
+          {t("demoHome")}
+        </Link>
         <LanguagePicker />
       </header>
 

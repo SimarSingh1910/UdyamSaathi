@@ -134,6 +134,7 @@ export const WA = {
     hi: "थोड़ी देर में {phone} पर एक कॉल आएगी जो 6 अंकों का कोड बोलेगी। उसे यहाँ लिखें।",
   },
   codeEnter: { en: "Type the 6-digit code we sent to {phone}.", hi: "{phone} पर भेजा गया 6 अंकों का कोड यहाँ लिखें।" },
+  demoFixedCode: { en: "_Demo shortcut: you can also type {code}._", hi: "_डेमो शॉर्टकट: आप {code} भी लिख सकते हैं।_" },
   demoCode: { en: "_Demo mode: no message was sent. The code is {code}._", hi: "_डेमो मोड: कोई मैसेज नहीं गया। कोड है {code}।_" },
   missedCallAsk: {
     en: "Give a missed call to *{number}* from {phone} within 10 minutes. It disconnects by itself and costs nothing. I'll message you here as soon as it comes through.",

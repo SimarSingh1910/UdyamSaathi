@@ -121,6 +121,19 @@ h3 { font-size: 1rem; margin: 20px 0 6px; }
 
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .brand { font-weight: 800; color: var(--brand); text-decoration: none; font-size: 1.15rem; }
+.home-link { font-size: 0.85rem; color: var(--muted); text-decoration: none; }
+.home-link:hover { color: var(--brand-dark); }
+
+/* Demo home: two entry cards */
+.home-card { padding: 20px; }
+.home-card h2 { margin: 6px 0 4px; }
+.home-card p { margin: 0; }
+.home-card .btn-block { margin: 16px 0 0; }
+.home-icon { font-size: 1.6rem; }
+.passcode { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; }
+.passcode code { font-size: 1rem; letter-spacing: 0.08em; word-break: break-all; }
+.eye { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink); cursor: pointer; }
+.eye:hover { border-color: var(--brand); color: var(--brand-dark); }
 
 .progress { display: flex; list-style: none; padding: 0; margin: 8px 0 16px; gap: 4px; }
 .progress li {
@@ -214,6 +227,7 @@ h3 { font-size: 1rem; margin: 20px 0 6px; }
 .admin-bar nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .admin-bar nav a { padding: 8px 12px; border-radius: 999px; color: var(--ink); text-decoration: none; }
 .admin-bar nav a.on { background: #fde8e8; color: var(--brand-dark); font-weight: 600; }
+.admin-bar nav a.home-link { color: var(--muted); font-size: 0.85rem; }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
 .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
 .kpi span { color: var(--muted); font-size: 0.85rem; }

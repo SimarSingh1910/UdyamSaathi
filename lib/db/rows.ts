@@ -1,8 +1,8 @@
 import { decryptValue, encryptValue } from "../security/encryption";
 import type { WaSession } from "../whatsapp/types";
-import type { HelpRequest, LeadAction, Order, PhoneVerification, StoredProduct } from "../store";
+import type { AddedLead, HelpRequest, LeadAction, Order, PhoneVerification, StoredProduct } from "../store";
 import type { SegmentCode } from "../catalogue";
-import { helpRequests, leadActions, orders, phoneVerifications, products } from "./schema";
+import { helpRequests, leadActions, leads, orders, phoneVerifications, products } from "./schema";
 
 /** Conversions between the app's objects (epoch-ms times, plain phones) and table rows. */
 
@@ -117,6 +117,20 @@ export const leadActionToRow = (leadId: string, a: LeadAction): NewRow<typeof le
   assignedTo: a.assignedTo ?? null,
   note: a.note ?? null,
   updatedAt: date(a.updatedAt),
+});
+
+export const addedLeadFromRow = (r: Row<typeof leads>): AddedLead => ({
+  id: r.id,
+  createdAt: ms(r.createdAt),
+  data: r.data,
+  phone: r.contactPhone ? decryptValue(r.contactPhone) : undefined,
+});
+
+export const addedLeadToRow = (l: AddedLead): NewRow<typeof leads> => ({
+  id: l.id,
+  createdAt: date(l.createdAt),
+  data: l.data,
+  contactPhone: l.phone ? encryptValue(l.phone) : null,
 });
 
 export const verificationFromRow = (r: Row<typeof phoneVerifications>): PhoneVerification => ({

@@ -1,4 +1,5 @@
 import { randomBytes, randomInt } from "node:crypto";
+import { fixedDemoCode } from "../demo";
 import { maskPhone, normalizePhone } from "../order-flow";
 import { checkToken, keyedHash, safeEqual, signToken } from "../security/hash";
 import {
@@ -71,6 +72,8 @@ export type StartResult =
       callNumber?: string;
       /** Demo mode only: the code that would have been sent. */
       demoCode?: string;
+      /** Demo site only: a code that is always accepted, next to the real one. */
+      fixedCode?: string;
       demo: boolean;
     }
   | { ok: false; error: "invalid_phone" | "unavailable" | "rate_limited" | "send_failed" };
@@ -120,6 +123,7 @@ export async function startVerification(args: {
     expiresAt: v.expiresAt,
     callNumber: args.method === "missed_call" ? missedCallNumber() || "1800-000-0000" : undefined,
     demoCode,
+    fixedCode: args.method !== "missed_call" && !demoCode ? fixedDemoCode() || undefined : undefined,
     demo: mode === "demo",
   };
 }
@@ -139,7 +143,8 @@ export async function checkCode(id: string, code: string): Promise<CheckResult> 
     else if (v.attempts >= MAX_ATTEMPTS) result = { ok: false, error: "too_many" };
     else {
       v.attempts += 1;
-      if (clean.length === 6 && safeEqual(codeHash(id, clean), v.codeHash)) {
+      const fixed = fixedDemoCode();
+      if (clean.length === 6 && (safeEqual(codeHash(id, clean), v.codeHash) || (fixed !== "" && clean === fixed))) {
         v.verifiedAt = Date.now();
         result = { ok: true, verification: v };
       } else {

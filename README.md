@@ -50,10 +50,21 @@ docker compose up --build    # http://localhost:3000
 
 This starts the app and a PostgreSQL 17 container; data lives in the `udyam-pg` volume and survives restarts. Settings come from `.env.local` if it exists (set `UDYAM_ENCRYPTION_KEY` there, and `POSTGRES_PASSWORD` for anything beyond local use).
 
+### Demo mode
+
+`DEMO_MODE` (on in development, off in production unless set to `1`) turns the app into an evaluator-friendly demo:
+
+- The home page (`/`) has two cards: **I run a business** opens `/start`; **I work at Accel** shows the back-office passcode (masked, with an eye to reveal it) and signs straight in.
+- Phone checks still send the real code, but the fixed code `123456` (`PHONE_DEMO_CODE`) is also accepted.
+- The back office starts with 8 sample orders at different stages, 2 help requests and 3 lead follow-ups (added once per database).
+
+Never use it for a real launch: the passcode is on a public page and anyone can pass the phone check.
+
 ## Screens
 
 | Route | What the owner does |
 | --- | --- |
+| `/` | Demo home: choose the business owner or the Accel staff side |
 | `/start` | Chat with the advisor (English or Hindi), get a bundle, tune it on the quote screen, finish KYC, place the order |
 | `/track/:orderId` | Follow installation and activation without calling support; updates live as Accel works on the order |
 
@@ -80,7 +91,7 @@ Codes are generated and checked by the app (providers only deliver them): each l
 
 ## Accel back office (`/admin`)
 
-Sign in with `ADMIN_PASSCODE` (default `accel-demo`).
+Sign in with `ADMIN_PASSCODE` (default `accel-demo`); in demo mode the home page signs you in.
 
 | Page | What Accel staff do |
 | --- | --- |

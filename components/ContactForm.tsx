@@ -16,6 +16,7 @@ interface Check {
   method: Method;
   callNumber?: string;
   demoCode?: string;
+  fixedCode?: string;
   demo: boolean;
 }
 
@@ -210,6 +211,11 @@ export default function ContactForm({ title, submitLabel, defaultName = "", busy
         {check.demoCode && (
           <p className="small muted">
             {t("demoCode")} <b>{check.demoCode}</b>
+          </p>
+        )}
+        {check.fixedCode && (
+          <p className="small muted">
+            {t("demoFixedCode")} <b>{check.fixedCode}</b>
           </p>
         )}
         <label>

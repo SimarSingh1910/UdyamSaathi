@@ -42,11 +42,11 @@ describe("translation", () => {
     const texts = catalog().map((t) => t.en);
     const first = await translate("ta", texts);
     expect(Object.keys(first)).toHaveLength(texts.length);
-    expect(first["Start now"]).toBe("«Start now»");
+    expect(first["I run a business"]).toBe("«I run a business»");
     expect(Math.max(...calls)).toBeLessThanOrEqual(40);
 
     const before = calls.length;
-    await translate("ta", ["Start now", "Monthly total"]);
+    await translate("ta", ["I run a business", "Monthly total"]);
     expect(calls.length).toBe(before); // cached, no new LLM call
   });
 

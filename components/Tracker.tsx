@@ -46,6 +46,9 @@ export default function Tracker({ id }: { id: string }) {
       <Link href="/" className="brand">
         {t("appName")}
       </Link>
+      <Link href="/" className="home-link">
+        {t("demoHome")}
+      </Link>
       <LanguagePicker />
     </header>
   );

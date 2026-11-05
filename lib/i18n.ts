@@ -18,32 +18,32 @@ export const STRINGS = {
   stepQuote: { en: "Quote", hi: "कीमत" },
   stepKyc: { en: "KYC", hi: "KYC" },
   stepDone: { en: "Done", hi: "पूरा" },
-  startNow: { en: "Start now", hi: "अभी शुरू करें" },
-  heroTitle: { en: "Get your business online in one sitting", hi: "एक ही बार में अपना बिज़नेस ऑनलाइन करें" },
-  heroBody: {
-    en: "Internet, business SIMs, WhatsApp, cloud email, security and CCTV: one bundle, one bill, one support number.",
-    hi: "इंटरनेट, बिज़नेस SIM, WhatsApp, क्लाउड ईमेल, सुरक्षा और CCTV: एक बंडल, एक बिल, एक सपोर्ट नंबर।",
+  demoLabel: { en: "Prototype demo", hi: "प्रोटोटाइप डेमो" },
+  homeTagline: {
+    en: "Small businesses find, buy and switch on Accel services from their phone, in their own language. Accel staff follow every order in one place.",
+    hi: "छोटे बिज़नेस अपने फ़ोन से, अपनी भाषा में Accel सेवाएं चुनते, खरीदते और चालू करते हैं। Accel टीम हर ऑर्डर एक जगह देखती है।",
   },
-  landing1Title: { en: "Tell us about your business", hi: "अपने बिज़नेस के बारे में बताइए" },
-  landing1Body: {
-    en: "Answer a few questions in your language. Our advisor recommends a bundle and explains why.",
-    hi: "अपनी भाषा में कुछ सवालों के जवाब दें। हमारा सलाहकार बंडल सुझाएगा और वजह भी बताएगा।",
+  ownerCardTitle: { en: "I run a business", hi: "मेरा बिज़नेस है" },
+  ownerCardBody: {
+    en: "Chat with the advisor, get a bundle with one clear price, finish Smart KYC and follow your installation live.",
+    hi: "सलाहकार से बात करें, एक साफ़ कीमत वाला बंडल पाएं, स्मार्ट KYC पूरा करें और इंस्टॉलेशन लाइव देखें।",
   },
-  landing2Title: { en: "See one clear monthly price", hi: "एक साफ़ मासिक कीमत देखें" },
-  landing2Body: {
-    en: "Toggle add-ons on or off and watch the price update. No product codes, no hidden fees.",
-    hi: "ऐड-ऑन चालू या बंद करें और कीमत तुरंत बदलती देखें। कोई प्रोडक्ट कोड नहीं, कोई छिपा शुल्क नहीं।",
+  ownerCardCta: { en: "Start as a business owner", hi: "बिज़नेस मालिक के रूप में शुरू करें" },
+  staffCardTitle: { en: "I work at Accel", hi: "मैं Accel में काम करता/करती हूँ" },
+  staffCardBody: {
+    en: "See every order and its status, KYC help requests and leads to call back, and manage the services on sale.",
+    hi: "हर ऑर्डर और उसकी स्थिति, KYC मदद के अनुरोध और कॉल करने लायक लीड देखें, और बिकने वाली सेवाएं संभालें।",
   },
-  landing3Title: { en: "Finish KYC in minutes", hi: "मिनटों में KYC पूरा करें" },
-  landing3Body: {
-    en: "We read your documents on your phone and check them against GST and Udyam records instantly.",
-    hi: "हम आपके दस्तावेज़ आपके फ़ोन पर ही पढ़ते हैं और तुरंत GST और उद्यम रिकॉर्ड से मिलाते हैं।",
+  staffCardCta: { en: "Open the back office", hi: "बैक ऑफ़िस खोलें" },
+  passcodeLabel: { en: "Back-office passcode", hi: "बैक ऑफ़िस पासकोड" },
+  showPasscode: { en: "Show passcode", hi: "पासकोड दिखाएं" },
+  hidePasscode: { en: "Hide passcode", hi: "पासकोड छिपाएं" },
+  passcodeNote: {
+    en: "The back office is protected. For this demo the button signs you in.",
+    hi: "बैक ऑफ़िस सुरक्षित है। इस डेमो में बटन आपको साइन इन कर देता है।",
   },
-  landing4Title: { en: "Track your order", hi: "अपना ऑर्डर ट्रैक करें" },
-  landing4Body: {
-    en: "Check installation and activation status any time, without calling support.",
-    hi: "सपोर्ट को कॉल किए बिना, कभी भी इंस्टॉलेशन और चालू होने की स्थिति देखें।",
-  },
+  signInFailed: { en: "Couldn't sign in. Please try again.", hi: "साइन इन नहीं हो पाया। फिर से कोशिश करें।" },
+  demoHome: { en: "← Demo home", hi: "← डेमो होम" },
   languagesCount: { en: "Available in English and 22 Indian languages", hi: "अंग्रेज़ी और 22 भारतीय भाषाओं में उपलब्ध" },
 
   // Advisor
@@ -184,6 +184,7 @@ export const STRINGS = {
   },
   verifyHow: { en: "How would you like to confirm this number is yours?", hi: "आप कैसे पक्का करना चाहेंगे कि यह नंबर आपका है?" },
   verifySms: { en: "Code by SMS", hi: "SMS से कोड" },
+  demoFixedCode: { en: "Demo shortcut: you can also type", hi: "डेमो शॉर्टकट: आप यह भी लिख सकते हैं" },
   comingSoon: { en: "coming soon", hi: "जल्द आ रहा है" },
   verifyVoice: { en: "Code by phone call", hi: "फ़ोन कॉल पर कोड" },
   verifyWhatsapp: { en: "Code on WhatsApp", hi: "WhatsApp पर कोड" },

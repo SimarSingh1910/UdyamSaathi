@@ -82,6 +82,25 @@ export const leadActions = pgTable("lead_actions", {
   updatedAt: ts("updated_at").notNull(),
 });
 
+/** Leads added by Accel staff, in the same column shape as smb_leads.csv. */
+export const leads = pgTable(
+  "leads",
+  {
+    id: text("id").primaryKey(),
+    createdAt: ts("created_at").notNull(),
+    data: jsonb("data").$type<Record<string, string>>().notNull(),
+    /** Encrypted; optional. */
+    contactPhone: text("contact_phone"),
+  },
+  (t) => [index("leads_created_at_idx").on(t.createdAt)],
+);
+
+/** Dataset leads that staff deleted: the CSV is never changed, so they are hidden instead. */
+export const hiddenLeads = pgTable("hidden_leads", {
+  leadId: text("lead_id").primaryKey(),
+  hiddenAt: ts("hidden_at").notNull(),
+});
+
 export const phoneVerifications = pgTable(
   "phone_verifications",
   {

@@ -9,5 +9,8 @@ export default defineConfig({
     include: ["tests/**/*.test.ts"],
     // Each test worker gets its own throwaway store, seeded from the CSVs.
     setupFiles: ["tests/setup.ts"],
+    // The first database call in each file starts and migrates an embedded PostgreSQL,
+    // which takes several seconds when many files start at once.
+    testTimeout: 30_000,
   },
 });

@@ -61,6 +61,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         >
           <span className="badge">Accel Business</span>
           <h1>Back office</h1>
+          <Link href="/" className="home-link">
+            ← Demo home
+          </Link>
           <p className="muted small">For Accel staff and partners only.</p>
           <label className="form">
             Passcode
@@ -80,6 +83,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           UdyamSaathi <span className="muted small">· Accel back office</span>
         </Link>
         <nav>
+          <Link href="/" className="home-link">
+            ← Demo home
+          </Link>
           {NAV.map((n) => (
             <Link key={n.href} href={n.href} className={path === n.href ? "on" : ""}>
               {n.label}

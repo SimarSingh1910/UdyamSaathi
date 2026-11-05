@@ -3,6 +3,8 @@ import { and, asc, desc, eq, gt, lt } from "drizzle-orm";
 import type { Product } from "./catalogue";
 import { getDb, type Db } from "./db";
 import {
+  addedLeadFromRow,
+  addedLeadToRow,
   leadActionFromRow,
   leadActionToRow,
   orderFromRow,
@@ -16,8 +18,19 @@ import {
   verificationFromRow,
   verificationToRow,
 } from "./db/rows";
-import { helpRequests, leadActions as leadActionsTable, orders, phoneVerifications, products, waSessions } from "./db/schema";
+import {
+  helpRequests,
+  hiddenLeads,
+  leadActions as leadActionsTable,
+  leads as leadsTable,
+  orders,
+  phoneVerifications,
+  products,
+  waSessions,
+} from "./db/schema";
+import { seedDemoOnce } from "./db/demo-seed";
 import { seedOnce } from "./db/seed";
+import { demoSite } from "./demo";
 import type { LangCode } from "./languages";
 import type { WaSession } from "./whatsapp/types";
 
@@ -100,6 +113,14 @@ export interface LeadAction {
   updatedAt: number;
 }
 
+/** A lead added by Accel staff; data uses the smb_leads.csv column names. */
+export interface AddedLead {
+  id: string;
+  createdAt: number;
+  data: Record<string, string>;
+  phone?: string;
+}
+
 export type VerifyMethod = "sms" | "voice" | "whatsapp" | "missed_call";
 
 /** A pending or finished check that the owner really has the phone they gave us. */
@@ -123,12 +144,14 @@ export interface StoredProduct extends Product {
   active: boolean;
 }
 
-// The first call in a process runs migrations (lib/db) and fills a new database once.
+// The first call in a process runs migrations (lib/db) and fills a new database once
+// (plus sample back-office data on a demo site).
 let ready: Promise<Db> | null = null;
 function db(): Promise<Db> {
   if (!ready) {
     ready = getDb().then(async (d) => {
       await seedOnce(d);
+      if (demoSite()) await seedDemoOnce(d);
       return d;
     });
     ready.catch(() => (ready = null));
@@ -257,7 +280,49 @@ export async function updateRequest(
   return row ? requestFromRow(row) : undefined;
 }
 
-// ---- Actions on dataset leads ------------------------------------------
+// ---- Leads: staff-added ones, and dataset ones that were deleted --------
+
+export async function listAddedLeads(): Promise<AddedLead[]> {
+  const rows = await (await db()).select().from(leadsTable).orderBy(desc(leadsTable.createdAt));
+  return rows.map(addedLeadFromRow);
+}
+
+export async function getAddedLead(id: string): Promise<AddedLead | undefined> {
+  const [row] = await (await db()).select().from(leadsTable).where(eq(leadsTable.id, id));
+  return row ? addedLeadFromRow(row) : undefined;
+}
+
+export async function addLead(data: Record<string, string>, phone?: string): Promise<AddedLead> {
+  const d = await db();
+  for (;;) {
+    const id = `LA${randomInt(100000, 1000000)}`;
+    const lead: AddedLead = { id, createdAt: Date.now(), data: { ...data, lead_id: id }, phone };
+    const inserted = await d.insert(leadsTable).values(addedLeadToRow(lead)).onConflictDoNothing().returning({ id: leadsTable.id });
+    if (inserted.length) return lead;
+  }
+}
+
+/** Added leads are removed; dataset leads are hidden, since the CSV is never changed. Follow-up notes go too. */
+export async function deleteLead(id: string, inDataset: boolean): Promise<boolean> {
+  return (await db()).transaction(async (tx) => {
+    let found: boolean;
+    if (inDataset) {
+      await tx.insert(hiddenLeads).values({ leadId: id, hiddenAt: new Date() }).onConflictDoNothing();
+      found = true;
+    } else {
+      found = (await tx.delete(leadsTable).where(eq(leadsTable.id, id)).returning({ id: leadsTable.id })).length > 0;
+    }
+    if (found) await tx.delete(leadActionsTable).where(eq(leadActionsTable.leadId, id));
+    return found;
+  });
+}
+
+export async function hiddenLeadIds(): Promise<Set<string>> {
+  const rows = await (await db()).select({ id: hiddenLeads.leadId }).from(hiddenLeads);
+  return new Set(rows.map((r) => r.id));
+}
+
+// ---- Actions on leads ----------------------------------------------------
 
 export async function leadActions(): Promise<Record<string, LeadAction>> {
   const rows = await (await db()).select().from(leadActionsTable);

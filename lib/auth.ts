@@ -8,18 +8,18 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 export const ADMIN_COOKIE = "uds_admin";
 const MAX_AGE_S = 12 * 60 * 60;
 
-function passcode(): string {
+export function adminPasscode(): string {
   return process.env.ADMIN_PASSCODE || "accel-demo";
 }
 
 function sign(value: string): string {
-  return createHmac("sha256", `uds:${passcode()}`).update(value).digest("hex");
+  return createHmac("sha256", `uds:${adminPasscode()}`).update(value).digest("hex");
 }
 
 export function checkPasscode(input: unknown): boolean {
   if (typeof input !== "string") return false;
   const a = Buffer.from(sign(input));
-  const b = Buffer.from(sign(passcode()));
+  const b = Buffer.from(sign(adminPasscode()));
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
