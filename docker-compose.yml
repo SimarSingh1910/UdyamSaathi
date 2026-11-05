@@ -7,11 +7,32 @@ services:
     env_file:
       - path: .env.local
         required: false
+    # ADMIN_PASSCODE, UDYAM_ENCRYPTION_KEY and the rest come from .env.local.
     environment:
-      ADMIN_PASSCODE: ${ADMIN_PASSCODE:-accel-demo}
+      DATABASE_URL: postgres://udyam:${POSTGRES_PASSWORD:-udyam-local}@db:5432/udyamsaathi
     volumes:
+      # Translation caches, and an old store.json to import on first start.
       - udyam-data:/app/.data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: udyam
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-udyam-local}
+      POSTGRES_DB: udyamsaathi
+    volumes:
+      - udyam-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U udyam -d udyamsaathi"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
 
 volumes:
   udyam-data:
+  udyam-pg:

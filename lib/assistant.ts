@@ -46,7 +46,7 @@ export interface AssistantResult {
 }
 
 /** The owner's situation, computed on the server from trusted sources. */
-export function ownerContext(input: AssistantInput): string {
+export async function ownerContext(input: AssistantInput): Promise<string> {
   const out: string[] = [`Screen they are on now: ${screenName(input.screen, input.labels)}.`];
 
   const known = Object.entries(input.answers ?? {})
@@ -55,7 +55,7 @@ export function ownerContext(input: AssistantInput): string {
   if (known.length) out.push(`Their business: ${known.join("; ")}.`);
 
   if (input.profile && input.items?.length) {
-    const catalogue = getCatalogue();
+    const catalogue = await getCatalogue();
     const q = buildQuote(input.items, input.profile, catalogue);
     const lines = q.lines.map((l) => `${l.name}${l.quantity > 1 ? ` × ${l.quantity}` : ""} ${formatInr(l.monthly)}/month before GST`);
     out.push(
@@ -146,7 +146,7 @@ export function ownerContext(input: AssistantInput): string {
     );
   }
 
-  const order = input.orderId ? getOrder(input.orderId) : undefined;
+  const order = input.orderId ? await getOrder(input.orderId) : undefined;
   if (!order && input.screen !== "tracker") {
     out.push("They have NOT placed an order yet, so every answer and product can still be changed in the app.");
   }
@@ -162,7 +162,8 @@ export function ownerContext(input: AssistantInput): string {
   return out.join("\n");
 }
 
-export function assistantPrompt(input: AssistantInput): string {
+/** `context` is ownerContext(input) and `catalogue` is catalogueBrief(), worked out once per turn. */
+export function assistantPrompt(input: AssistantInput, context: string, catalogue: string): string {
   const L = languageOf(input.lang);
   const actions = input.actions.length ? input.actions.join(", ") : "none";
   return `You are the owner's personal assistant inside the UdyamSaathi app, where Indian small-business owners buy Accel Business internet, phone and IT services. You are both an advisor (what to choose for their business, and why) and a guide (where things are in the app). You know every screen, their own bundle and their order.
@@ -187,10 +188,10 @@ App guide:
 ${appGuide(input.labels)}
 
 Owner right now:
-${ownerContext(input)}
+${context}
 
 Catalogue (₹ per month before GST, "12m min" = 12-month minimum contract, "~3d install" = installed in about 3 days):
-${catalogueBrief()}
+${catalogue}
 
 FAQ:${FAQ}
 
@@ -198,6 +199,7 @@ Respond with JSON only: {"reply": string, "action": one of [${ACTION_IDS.join(",
 }
 
 export async function assistantChat(input: AssistantInput): Promise<AssistantResult> {
+  const [context, brief] = await Promise.all([ownerContext(input), catalogueBrief()]);
   const history = input.history.slice(-10).map((t) => ({ ...t, content: t.content.slice(0, 600) }));
   const last = [...history].reverse().find((t) => t.role === "user")?.content ?? "";
   const allowed = (a: unknown): ActionId | null => (isActionId(a) && input.actions.includes(a) ? a : null);
@@ -207,7 +209,7 @@ export async function assistantChat(input: AssistantInput): Promise<AssistantRes
   const ask = async (extra = "") =>
     parseJsonReply<{ reply?: unknown; action?: unknown }>(
       await complete({
-        system: assistantPrompt(input),
+        system: assistantPrompt(input, context, brief),
         user: `Conversation so far:\n${transcript}\n\nReply to the owner's last message.${extra}`,
         json: true,
         timeoutMs: 15_000,
@@ -225,7 +227,7 @@ export async function assistantChat(input: AssistantInput): Promise<AssistantRes
   }
 
   // Every ₹ amount must come from the data we gave the model, never its own arithmetic.
-  const known = new Set([...rupeeAmounts(ownerContext(input)), ...rupeeAmounts(catalogueBrief())]);
+  const known = new Set([...rupeeAmounts(context), ...rupeeAmounts(brief)]);
   const invented = (r: string) => rupeeAmounts(r).filter((n) => !known.has(n));
   if (raw && typeof raw.reply === "string" && invented(raw.reply).length) {
     const bad = invented(raw.reply).map((n) => formatInr(n)).join(", ");
@@ -245,7 +247,7 @@ export async function assistantChat(input: AssistantInput): Promise<AssistantRes
   }
 
   // No LLM: advice straight from the bundle, or directions from the app guide.
-  const advice = ADVICE.test(last) ? adviceFromBundle(input) : null;
+  const advice = ADVICE.test(last) ? await adviceFromBundle(input) : null;
   if (advice) return { reply: advice, action: allowed("go_quote"), source: "rules" };
   const howTo = matchHowTo(last);
   return { reply: howTo?.answer ?? GENERIC_HELP, action: allowed(howTo?.action), source: "rules" };
@@ -266,8 +268,8 @@ export function similarity(a: string, b: string): number {
 const ADVICE = /choose|select|pick|should i|do i need|recommend|suggest|worth|skip|too (much|expensive)|chun|chuz|लूँ|लूं|लेना|चुन|चूज|ज़रूरत|जरूरत|सुझाव|क्या.?क्या/iu;
 
 /** Rule-based advice for "what should I choose", built from why each product was suggested. */
-export function adviceFromBundle(input: AssistantInput): Text | null {
-  const catalogue = new Map(getCatalogue().map((p) => [p.id, p]));
+export async function adviceFromBundle(input: AssistantInput): Promise<Text | null> {
+  const catalogue = new Map((await getCatalogue()).map((p) => [p.id, p]));
   const lines = (input.lines ?? []).filter((l) => catalogue.has(l.productId));
   if (!lines.length) return null;
   const name = (l: (typeof lines)[number]) => catalogue.get(l.productId)!.name;

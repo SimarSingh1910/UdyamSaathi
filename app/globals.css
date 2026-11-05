@@ -344,3 +344,18 @@ main { padding-bottom: 96px; }
 .assistant-input .mic:not(.mic-on) .mic-label { display: none; }
 .assistant-input .voice { position: relative; }
 .assistant-input .voice .small { position: absolute; bottom: 100%; inset-inline-end: 0; width: 220px; background: var(--bg); }
+
+/* WhatsApp simulator (/whatsapp) */
+.wa-who label { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.wa-who input, .wa-input input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; font: inherit; }
+.wa-chat { background: #efeae2; border-radius: var(--radius); padding: 12px; margin: 12px 0; min-height: 50dvh; display: flex; flex-direction: column; gap: 6px; }
+.wa-bubble { max-width: 85%; padding: 8px 10px; border-radius: 10px; line-height: 1.4; font-size: 0.95rem; overflow-wrap: anywhere; }
+.wa-bot { background: #fff; align-self: flex-start; }
+.wa-me { background: #d9fdd3; align-self: flex-end; }
+.wa-img { max-width: 180px; border-radius: 6px; display: block; }
+.wa-buttons { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px; }
+.wa-buttons button { background: none; border: none; color: #027eb5; font: inherit; padding: 6px; cursor: pointer; }
+.wa-buttons button:disabled { color: var(--muted); cursor: default; }
+.wa-buttons .wa-row { display: flex; flex-direction: column; align-items: flex-start; text-align: left; color: var(--ink); border-top: 1px solid var(--line); }
+.wa-input { display: flex; gap: 8px; position: sticky; bottom: 8px; }
+.wa-input input:not([hidden]) { flex: 1; }

@@ -38,9 +38,9 @@ export function missing(answers: PartialAnswers): QuestionKey[] {
 }
 
 /** Compact catalogue for the prompt, built from the live (admin-editable) catalogue. Kept short: every turn pays for it. */
-export function catalogueBrief(): string {
+export async function catalogueBrief(): Promise<string> {
   const k = (n: number) => (n >= 1000 && n % 100 === 0 ? `${n / 1000}k` : String(n));
-  return getCatalogue()
+  return (await getCatalogue())
     .map((p) => {
       const rules = [
         p.cityTiers.length === 1 ? `tier-${p.cityTiers[0]} cities` : null,
@@ -68,7 +68,7 @@ export const FAQ = `
 - The app works in English and 22 Indian languages. If the owner asks to switch language, set "language" to its code and reply in that language.
 - For anything not covered here (exact coverage at an address, custom discounts, early-exit fees, complaints about another provider), do not guess: offer a call from a local Accel partner and set "handoff": true.`;
 
-export function systemPrompt(lang: LangCode, answers: PartialAnswers, pending: QuestionKey | null): string {
+export function systemPrompt(lang: LangCode, answers: PartialAnswers, pending: QuestionKey | null, catalogue: string): string {
   const L = languageOf(lang);
   const known = Object.entries(answers)
     .filter(([, v]) => v !== undefined)
@@ -105,7 +105,7 @@ Already known: ${known || "nothing yet"}.
 Next fact to ask for: ${pending ?? "none, all known"}${pending ? ` ("${QUESTION_TEXT[pending]}")` : ""}.
 
 Catalogue:
-${catalogueBrief()}
+${catalogue}
 
 FAQ:${FAQ}
 
@@ -128,7 +128,7 @@ export async function advisorChat(args: {
   const transcript = history.map((t) => `${t.role === "user" ? "Owner" : "Advisor"}: ${t.content}`).join("\n");
   const raw = parseJsonReply<{ reply?: unknown; updates?: Record<string, unknown>; handoff?: unknown; asking?: unknown; language?: unknown }>(
     await complete({
-      system: systemPrompt(args.lang, args.answers, args.pending),
+      system: systemPrompt(args.lang, args.answers, args.pending, await catalogueBrief()),
       user: `Conversation so far:\n${transcript}\n\nReply to the owner's last message.`,
       json: true,
       timeoutMs: 22_000,

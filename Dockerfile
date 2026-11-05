@@ -29,6 +29,7 @@ COPY --from=build --chown=app:app /app/.next/static ./.next/static
 COPY --from=build --chown=app:app /app/public ./public
 COPY --from=build --chown=app:app /app/data ./data
 COPY --from=build --chown=app:app /app/messages ./messages
+COPY --from=build --chown=app:app /app/drizzle ./drizzle
 USER app
 EXPOSE 3000
 VOLUME ["/app/.data"]

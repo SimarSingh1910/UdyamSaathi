@@ -9,7 +9,7 @@ import {
   nextStatus,
   scheduleInstall,
 } from "@/lib/order-flow";
-import { getOrder, updateOrder, type LineStatus, type OrderStatus } from "@/lib/store";
+import { getOrder, updateOrder, type LineStatus, type Order, type OrderStatus } from "@/lib/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,14 +23,14 @@ type Action =
   | { action: "cancel"; reason?: string }
   | { action: "reveal_phone" };
 
-const masked = (o: NonNullable<ReturnType<typeof getOrder>>) => ({
+const masked = (o: Order) => ({
   ...o,
   contact: { name: o.contact.name, phone: maskPhone(o.contact.phone) },
 });
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!isAdmin(req)) return unauthorized();
-  const o = getOrder((await params).id);
+  const o = await getOrder((await params).id);
   return o ? NextResponse.json(masked(o)) : NextResponse.json({ error: "Not found" }, { status: 404 });
 }
 
@@ -39,13 +39,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!isAdmin(req)) return unauthorized();
   const id = (await params).id;
   const body = (await req.json().catch(() => null)) as Action | null;
-  const current = getOrder(id);
+  const current = await getOrder(id);
   if (!current) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!body?.action) return NextResponse.json({ error: "action is required" }, { status: 400 });
 
   if (body.action === "reveal_phone") {
     // Seeing the full number is logged, so access to personal data is traceable.
-    updateOrder(id, (o) =>
+    await updateOrder(id, (o) =>
       o.events.push({ at: Date.now(), by: "accel", note: { en: "Contact number viewed by Accel staff", hi: "Accel स्टाफ़ ने संपर्क नंबर देखा" } }),
     );
     return NextResponse.json({ phone: current.contact.phone });
@@ -56,7 +56,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   let error: string | null = null;
-  const updated = updateOrder(id, (o) => {
+  const updated = await updateOrder(id, (o) => {
     switch (body.action) {
       case "advance": {
         const next = nextStatus(o.status);

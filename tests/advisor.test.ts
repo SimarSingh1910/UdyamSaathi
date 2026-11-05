@@ -4,6 +4,8 @@ import { parseByKeywords } from "@/lib/advisor-parse";
 import { getCatalogue } from "@/lib/catalogue";
 import { buildQuote } from "@/lib/quote";
 
+const catalogue = await getCatalogue();
+
 const base: AdvisorAnswers = {
   businessType: "Kirana store",
   city: "Lucknow",
@@ -14,10 +16,10 @@ const base: AdvisorAnswers = {
   hasGstin: true,
 };
 
-const ids = (a: AdvisorAnswers) => recommend(a, getCatalogue()).items.map((i) => i.productId);
+const ids = (a: AdvisorAnswers) => recommend(a, catalogue).items.map((i) => i.productId);
 const quoteFor = (a: AdvisorAnswers) => {
-  const rec = recommend(a, getCatalogue());
-  return buildQuote(rec.items, rec.profile, getCatalogue());
+  const rec = recommend(a, catalogue);
+  return buildQuote(rec.items, rec.profile, catalogue);
 };
 
 describe("advisor", () => {
@@ -32,7 +34,7 @@ describe("advisor", () => {
   });
 
   it("swaps WhatsApp for a website when there is no GSTIN, and says why", () => {
-    const rec = recommend({ ...base, hasGstin: false }, getCatalogue());
+    const rec = recommend({ ...base, hasGstin: false }, catalogue);
     expect(rec.items.map((i) => i.productId)).toContain("P18");
     expect(rec.items.map((i) => i.productId)).not.toContain("P15");
     expect(rec.skipped[0].productId).toBe("P15");

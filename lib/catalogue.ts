@@ -61,10 +61,10 @@ export function parseProduct(row: Record<string, string>): Product {
  * Products currently on sale. Seeded from product_catalogue.csv on first run;
  * Accel staff can add, edit, hide or delete them from the back office.
  */
-export function getCatalogue(): Product[] {
+export function getCatalogue(): Promise<Product[]> {
   return listProducts(false);
 }
 
-export function getProduct(id: string): Product | undefined {
-  return getCatalogue().find((p) => p.id === id);
+export async function getProduct(id: string): Promise<Product | undefined> {
+  return (await getCatalogue()).find((p) => p.id === id);
 }

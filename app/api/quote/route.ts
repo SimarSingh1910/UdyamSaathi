@@ -44,5 +44,5 @@ export async function POST(req: Request) {
     hasActiveGstin: p.hasActiveGstin === true,
   };
 
-  return NextResponse.json(buildQuote(items, profile, getCatalogue()));
+  return NextResponse.json(buildQuote(items, profile, await getCatalogue()));
 }

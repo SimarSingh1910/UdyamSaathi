@@ -27,17 +27,20 @@ Built for **YTL Hackathon 2026, Enterprise Track A: Project Udyam Digital**. All
 ## Tech
 
 - Next.js (App Router) + TypeScript, one app for the mobile UI and the API routes
-- CSV-backed mock registries and catalogue in `data/`
+- PostgreSQL with Drizzle ORM (an embedded PostgreSQL, PGlite, when no server is configured)
+- CSV-backed mock registries and the starting catalogue in `data/`
 - Vitest for unit tests
 
 ## Getting started
 
 ```bash
 npm install
-cp .env.example .env.local
+cp .env.example .env.local   # set UDYAM_ENCRYPTION_KEY (openssl rand -hex 32)
 npm run dev        # http://localhost:3000
 npm test
 ```
+
+With no `DATABASE_URL`, the app runs on an embedded PostgreSQL stored in `.data/pglite`, so nothing else needs installing. To use a PostgreSQL server (local, Neon, Supabase, Render), set `DATABASE_URL`; tables are created on start.
 
 ### With Docker
 
@@ -45,7 +48,7 @@ npm test
 docker compose up --build    # http://localhost:3000
 ```
 
-Orders, services and follow-ups are kept in a Docker volume (`udyam-data`), so they survive restarts. Settings come from `.env.local` if it exists.
+This starts the app and a PostgreSQL 17 container; data lives in the `udyam-pg` volume and survives restarts. Settings come from `.env.local` if it exists (set `UDYAM_ENCRYPTION_KEY` there, and `POSTGRES_PASSWORD` for anything beyond local use).
 
 ## Screens
 
@@ -53,6 +56,25 @@ Orders, services and follow-ups are kept in a Docker volume (`udyam-data`), so t
 | --- | --- |
 | `/start` | Chat with the advisor (English or Hindi), get a bundle, tune it on the quote screen, finish KYC, place the order |
 | `/track/:orderId` | Follow installation and activation without calling support; updates live as Accel works on the order |
+
+## WhatsApp
+
+The whole `/start` journey also runs as a WhatsApp chat: advisor (typed or voice notes), bundle with buttons to switch products on or off, consent, KYC from document photos, contact, phone check and order, plus `STATUS`, `START OVER`, `LANGUAGE`, `STOP` and a hand-off to a person at any point. It uses the same rules, quote engine, KYC checks and order store as the web app (`lib/whatsapp/bot.ts`).
+
+- **Without credentials (demo mode)**: open `/whatsapp` for a simulator that talks to the real bot. Type `hi`, and `SAMPLE K08` at the KYC step to use a specimen applicant.
+- **Going live**: create a Meta app with the WhatsApp product, fill in the `WHATSAPP_*` settings in `.env.local`, and register `https://<your-host>/api/whatsapp/webhook` (with `WHATSAPP_VERIFY_TOKEN`), subscribed to `messages`. Webhooks are rejected unless they carry a valid signature from `WHATSAPP_APP_SECRET`. Set `PUBLIC_BASE_URL` so order messages include a tracking link.
+- Document photos sent on WhatsApp are read on the server (the same tesseract.js engine as the browser), in memory, and dropped; the extracted text is held in memory for at most 30 minutes and never written to the store.
+
+## Phone verification
+
+Before anyone calls a number, the owner proves it is theirs and chooses how:
+
+| Method | How it works | Needs |
+| --- | --- | --- |
+| WhatsApp code | 6-digit code sent with an approved authentication template; 10 minutes, 5 tries | `WHATSAPP_OTP_TEMPLATE` |
+| Missed call | Owner rings `MISSED_CALL_NUMBER`; the provider calls `/api/verify/missed-call?secret=…` with the caller's number | `MISSED_CALL_NUMBER`, `MISSED_CALL_WEBHOOK_SECRET` |
+
+A number can start 3 checks per 10 minutes. The web form gets a 30-minute signed token that `/api/orders` and `/api/requests` require. On WhatsApp, the chat's own number counts as verified; a different number goes through the same check, and a missed call resumes the waiting chat on its own. Without providers, demo mode shows the code on screen and offers a "simulate call" button (on in development; set `PHONE_VERIFY_DEMO=1` for a hosted demo).
 
 ## Accel back office (`/admin`)
 
@@ -77,6 +99,13 @@ Phone numbers are masked in the back office; revealing one is written to the ord
 | POST | `/api/kyc/verify` | Checks OCR text from the 4 KYC documents against each other and the registries (needs consent) |
 | GET | `/api/lookup/gstin/:gstin` | Mock GSTIN lookup (format, checksum and registry status) |
 | GET | `/api/lookup/udyam/:udyam` | Mock Udyam lookup |
+| GET | `/api/verify` | Which phone checks are available (live, demo or off) |
+| POST | `/api/verify/start` | Starts a WhatsApp-code or missed-call check |
+| POST | `/api/verify/check` | Checks a WhatsApp code and returns a phone token |
+| GET | `/api/verify/status` | Polled while waiting for a missed call; returns the token once it arrives |
+| GET/POST | `/api/verify/missed-call` | Webhook for the missed-call provider |
+| GET/POST | `/api/whatsapp/webhook` | Meta webhook: registration check and incoming messages |
+| GET/POST | `/api/whatsapp/simulate` | Demo-mode simulator backend (off when WhatsApp is connected) |
 
 ## How the pieces fit
 
@@ -84,7 +113,7 @@ Phone numbers are masked in the back office; revealing one is written to the ord
 - **Smart KYC**: documents are read on the phone with tesseract.js (engine and language data are self-hosted). Only the extracted text goes to the server, where it is matched against the GST and Udyam registries and across documents. On the 12 specimen applicants it catches a cancelled GSTIN, unreadable photos, a missing Udyam certificate, a missing Udyam number, GSTINs that fail the checksum, an edited legal name and an address proof older than 90 days.
 - **Orders and tracker**: orders are priced again on the server (the client's numbers are never trusted) and stored with an event log. Every change Accel makes is an event, and the owner's tracker polls for them.
 - **Lead score**: a logistic regression trained on the quarter's leads at start-up (about half a second). On held-out leads it reaches an AUC of 0.72; the top 10% it ranks convert at about twice the average rate. Each score comes with the two factors that raised it most.
-- **Storage**: a JSON file behind a small store module (`lib/store.ts`). Everything goes through that module, so it can move to Postgres without touching routes or screens.
+- **Storage**: PostgreSQL through Drizzle ORM. Routes and screens only call the store module (`lib/store.ts`); tables are in `lib/db/schema.ts`. Order and lead updates lock the row, so two staff edits can't overwrite each other, and code checks count every attempt even when guesses arrive at once.
 
 ## LLM
 
@@ -98,6 +127,17 @@ Set `LLM_PROVIDER` (gemini, groq, openai or anthropic) and `LLM_API_KEY` in `.en
 | `data/smb_leads.csv` | 5,000 leads for one quarter, with funnel stage and outcomes |
 | `data/mock_gstin_registry.csv` | Mock GST registry backing the GSTIN lookup |
 | `data/mock_udyam_registry.csv` | Mock Udyam registry backing the Udyam lookup |
+
+## Database
+
+| Setting | Database |
+| --- | --- |
+| `DATABASE_URL` set | That PostgreSQL server (add `?sslmode=require` for hosted ones) |
+| Not set | Embedded PostgreSQL (PGlite) in `.data/pglite`; tests use an in-memory one |
+
+- **Migrations**: SQL files in `drizzle/`, applied automatically on start. After changing `lib/db/schema.ts`, run `npm run db:generate` and commit the new file. `npm run db:studio` opens a data browser.
+- **First start**: an empty database is filled once, from an existing `.data/store.json` if there is one (the JSON store used before PostgreSQL; the file is left untouched), otherwise with the catalogue from `data/product_catalogue.csv`.
+- **Encryption**: phone numbers and WhatsApp conversations are encrypted per value with AES-256-GCM using `UDYAM_ENCRYPTION_KEY`; phone checks keep only a keyed hash. Keep the key safe: without it these values can't be read.
 
 ## Privacy
 

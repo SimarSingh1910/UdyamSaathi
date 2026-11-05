@@ -8,10 +8,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** The success metrics: live numbers from UdyamSaathi next to the Apr-Jun baseline. */
-export function GET(req: Request) {
+export async function GET(req: Request) {
   if (!isAdmin(req)) return unauthorized();
 
-  const orders = listOrders();
+  const [orders, requests] = await Promise.all([listOrders(), listRequests()]);
   const byStatus = Object.fromEntries([...STATUS_FLOW, "cancelled"].map((s) => [s, 0])) as Record<string, number>;
   for (const o of orders) byStatus[o.status]++;
 
@@ -31,7 +31,7 @@ export function GET(req: Request) {
       byStatus,
       monthlyRevenue: orders.filter((o) => o.status !== "cancelled").reduce((s, o) => s + o.monthlyTotal, 0),
       avgDaysToActivate: avg(daysToActive),
-      openRequests: listRequests().filter((r) => r.status !== "resolved").length,
+      openRequests: requests.filter((r) => r.status !== "resolved").length,
     },
     baseline: {
       leads: leads.length,

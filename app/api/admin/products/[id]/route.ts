@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!isAdmin(req)) return unauthorized();
   const id = (await params).id;
-  const all = listProducts(true);
+  const all = await listProducts(true);
   const current = all.find((p) => p.id === id);
   if (!current) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -18,12 +18,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const { product, errors } = parseProductInput({ ...current, ...body }, id, new Set(all.map((p) => p.id)));
   if (!product) return NextResponse.json({ error: errors.join("; ") }, { status: 400 });
-  return NextResponse.json(upsertProduct(product));
+  return NextResponse.json(await upsertProduct(product));
 }
 
 /** DELETE /api/admin/products/:id. Existing orders keep their copy of the product. */
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!isAdmin(req)) return unauthorized();
-  const ok = deleteProduct((await params).id);
+  const ok = await deleteProduct((await params).id);
   return ok ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "Not found" }, { status: 404 });
 }

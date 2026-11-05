@@ -7,8 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** GET /api/admin/requests: owners who asked for help, newest first. */
-export function GET(req: Request) {
+export async function GET(req: Request) {
   if (!isAdmin(req)) return unauthorized();
-  const requests = listRequests().map((r) => ({ ...r, contact: { name: r.contact.name, phone: maskPhone(r.contact.phone) } }));
+  const requests = (await listRequests()).map((r) => ({ ...r, contact: { name: r.contact.name, phone: maskPhone(r.contact.phone) } }));
   return NextResponse.json({ requests });
 }

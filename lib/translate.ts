@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import path from "node:path";
 import { inExpectedScript, languageOf, type LangCode } from "./languages";
 import { complete, llmEnabled, parseJsonReply } from "./llm";
-import { dataDir } from "./store";
+import { dataDir } from "./data-dir";
 
 /**
  * Translation for languages without hand-written copy. English text is the key.

@@ -9,9 +9,9 @@ export const runtime = "nodejs";
  * Optional query: tier=1|2&employees=N&sites=N&gstin=active
  * With a profile, each product also carries `eligibility`.
  */
-export function GET(req: NextRequest) {
+export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams;
-  const catalogue = getCatalogue();
+  const catalogue = await getCatalogue();
 
   if (!q.has("tier")) {
     return NextResponse.json({ products: catalogue });

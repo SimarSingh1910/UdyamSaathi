@@ -18,7 +18,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Unknown status" }, { status: 400 });
   }
 
-  const action = setLeadAction(id, {
+  const action = await setLeadAction(id, {
     ...(body.status ? { status: body.status } : {}),
     ...(typeof body.assignedTo === "string" ? { assignedTo: body.assignedTo.slice(0, 80) } : {}),
     ...(typeof body.note === "string" ? { note: body.note.slice(0, 500) } : {}),

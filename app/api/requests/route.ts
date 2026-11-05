@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { maskPhone, normalizePhone } from "@/lib/order-flow";
 import { createRequest } from "@/lib/store";
+import { checkPhoneToken } from "@/lib/verify/phone";
 
 export const runtime = "nodejs";
 
@@ -15,12 +16,16 @@ export async function POST(req: Request) {
   if (!name || !phone) {
     return NextResponse.json({ error: "Name and a valid 10-digit mobile number are required" }, { status: 400 });
   }
+  // A partner will ring this number, so make sure it is the owner's.
+  if (!checkPhoneToken(phone, body?.phoneToken ?? body?.contact?.phoneToken)) {
+    return NextResponse.json({ error: "Verify your mobile number first" }, { status: 403 });
+  }
 
   const reasons = Array.isArray(body?.reasons)
     ? body.reasons.filter((r: unknown) => typeof r === "string").slice(0, 10).map((r: string) => r.slice(0, 200))
     : [];
 
-  const r = createRequest({
+  const r = await createRequest({
     kind: body?.kind === "callback" ? "callback" : "kyc_help",
     contact: { name, phone },
     business: {

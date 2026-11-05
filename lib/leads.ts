@@ -34,7 +34,7 @@ function median(values: number[]): number {
 }
 
 /** Dropped leads from the quarter, scored once and cached; follow-up actions are merged live. */
-export function scoredLeads(): ScoredLead[] {
+export async function scoredLeads(): Promise<ScoredLead[]> {
   if (!cache) {
     const rows = loadDataset("smb_leads");
     const model = getModel();
@@ -69,7 +69,7 @@ export function scoredLeads(): ScoredLead[] {
       });
     cache = { leads, segmentValue };
   }
-  const actions = leadActions();
+  const actions = await leadActions();
   return cache.leads.map((l) => (actions[l.id] ? { ...l, action: actions[l.id] } : l));
 }
 

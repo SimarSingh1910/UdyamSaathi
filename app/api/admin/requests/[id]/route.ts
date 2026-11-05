@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdmin, unauthorized } from "@/lib/auth";
-import { listRequests, updateRequest, type RequestStatus } from "@/lib/store";
+import { getRequest, updateRequest, type RequestStatus } from "@/lib/store";
 
 export const runtime = "nodejs";
 
@@ -14,7 +14,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!body) return NextResponse.json({ error: "Body must be JSON" }, { status: 400 });
 
   if (body.action === "reveal_phone") {
-    const r = listRequests().find((x) => x.id === id);
+    const r = await getRequest(id);
     return r ? NextResponse.json({ phone: r.contact.phone }) : NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -26,6 +26,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (typeof body.assignedTo === "string") patch.assignedTo = body.assignedTo.slice(0, 80);
   if (typeof body.note === "string") patch.note = body.note.slice(0, 500);
 
-  const r = updateRequest(id, patch);
+  const r = await updateRequest(id, patch);
   return r ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "Not found" }, { status: 404 });
 }
