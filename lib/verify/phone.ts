@@ -10,14 +10,16 @@ import {
   type VerifyMethod,
 } from "../store";
 import { sendOtpTemplate, whatsappOtpLive } from "../whatsapp/client";
+import { sendTwoFactorOtp, twoFactorLive, twoFactorSmsLive } from "./twofactor";
 
 /**
- * Proves the owner has the phone they gave us, by one of two methods they choose:
- * - WhatsApp code: a 6-digit code sent with an approved authentication template.
- * - Missed call: they ring our number from theirs; the telephony provider tells us
- *   the caller's number through a webhook (Exotel, Knowlarity, 2Factor and others).
- * In demo mode (no provider set up) the code is shown on screen and the missed call
- * can be simulated, so the journey can be tried end to end.
+ * Proves the owner has the phone they gave us, in the way they choose:
+ * - SMS code or voice-call code: a 6-digit code delivered by 2Factor.in.
+ * - WhatsApp code: sent with an approved authentication template (Meta Cloud API).
+ * - Missed call (only when a number is configured): they ring our number and the
+ *   telephony provider reports the caller through a webhook.
+ * We generate and check every code here; providers only deliver it. In demo mode
+ * (no provider set up) the code is shown on screen, so the journey can be tried.
  */
 
 export const CHECK_TTL_MS = 10 * 60_000;
@@ -42,7 +44,21 @@ export function demoAllowed(): boolean {
 
 export function verifyMethods(): Record<VerifyMethod, "live" | "demo" | "off"> {
   const mode = (live: boolean) => (live ? "live" : demoAllowed() ? "demo" : "off");
-  return { whatsapp: mode(whatsappOtpLive()), missed_call: mode(Boolean(missedCallNumber())) };
+  return {
+    // With 2Factor but no DLT template an "SMS" turns into a call, so offer only the call.
+    sms: twoFactorLive() ? (twoFactorSmsLive() ? "live" : "off") : mode(false),
+    voice: mode(twoFactorLive()),
+    whatsapp: mode(whatsappOtpLive()),
+    // Not offered unless a missed-call number is set up: there is no demo for it.
+    missed_call: missedCallNumber() ? "live" : "off",
+  };
+}
+
+/** Delivers a code for real. False if the provider refused or could not be reached. */
+function deliver(method: Exclude<VerifyMethod, "missed_call">, phone: string, code: string): Promise<boolean> {
+  if (method === "sms") return sendTwoFactorOtp("SMS", phone, code);
+  if (method === "voice") return sendTwoFactorOtp("VOICE", phone, code);
+  return sendOtpTemplate(`91${phone}`, code);
 }
 
 export type StartResult =
@@ -85,11 +101,11 @@ export async function startVerification(args: {
   };
 
   let demoCode: string | undefined;
-  if (args.method === "whatsapp") {
+  if (args.method !== "missed_call") {
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
     v.codeHash = codeHash(v.id, code);
     if (mode === "live") {
-      if (!(await sendOtpTemplate(`91${phone}`, code))) return { ok: false, error: "send_failed" };
+      if (!(await deliver(args.method, phone, code))) return { ok: false, error: "send_failed" };
     } else {
       demoCode = code;
     }
@@ -117,7 +133,7 @@ export async function checkCode(id: string, code: string): Promise<CheckResult> 
   let result: CheckResult = { ok: false, error: "not_found" };
   // Decide inside the row lock, so parallel guesses can't get past the attempt limit.
   await updateVerification(id, (v) => {
-    if (v.method !== "whatsapp" || !v.codeHash) result = { ok: false, error: "not_found" };
+    if (!v.codeHash) result = { ok: false, error: "not_found" };
     else if (v.verifiedAt) result = { ok: true, verification: v };
     else if (v.expiresAt < Date.now()) result = { ok: false, error: "expired" };
     else if (v.attempts >= MAX_ATTEMPTS) result = { ok: false, error: "too_many" };
@@ -151,7 +167,7 @@ export async function recordMissedCall(rawCaller: string): Promise<PhoneVerifica
 
 /** Demo mode: pretend the missed call for this check came in. */
 export async function simulateMissedCall(id: string): Promise<PhoneVerification | null> {
-  if (verifyMethods().missed_call !== "demo") return null;
+  if (!demoAllowed() || missedCallNumber()) return null;
   const v = await getVerification(id);
   if (!v || v.method !== "missed_call" || v.expiresAt < Date.now()) return null;
   return (await updateVerification(id, (x) => (x.verifiedAt ??= Date.now()))) ?? null;

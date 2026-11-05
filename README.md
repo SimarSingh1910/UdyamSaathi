@@ -71,10 +71,12 @@ Before anyone calls a number, the owner proves it is theirs and chooses how:
 
 | Method | How it works | Needs |
 | --- | --- | --- |
-| WhatsApp code | 6-digit code sent with an approved authentication template; 10 minutes, 5 tries | `WHATSAPP_OTP_TEMPLATE` |
-| Missed call | Owner rings `MISSED_CALL_NUMBER`; the provider calls `/api/verify/missed-call?secret=…` with the caller's number | `MISSED_CALL_NUMBER`, `MISSED_CALL_WEBHOOK_SECRET` |
+| SMS code | 6-digit code by text message, delivered by 2Factor.in | `TWOFACTOR_API_KEY` + `TWOFACTOR_SMS_TEMPLATE` (approved DLT template) |
+| Voice-call code | An automated call reads the 6-digit code out, delivered by 2Factor.in | `TWOFACTOR_API_KEY` |
+| WhatsApp code | Sent with an approved authentication template | WhatsApp Cloud API settings and `WHATSAPP_OTP_TEMPLATE` |
+| Missed call (optional) | Owner rings `MISSED_CALL_NUMBER`; the provider calls `/api/verify/missed-call?secret=…` with the caller's number | `MISSED_CALL_NUMBER`, `MISSED_CALL_WEBHOOK_SECRET` |
 
-A number can start 3 checks per 10 minutes. The web form gets a 30-minute signed token that `/api/orders` and `/api/requests` require. On WhatsApp, the chat's own number counts as verified; a different number goes through the same check, and a missed call resumes the waiting chat on its own. Without providers, demo mode shows the code on screen and offers a "simulate call" button (on in development; set `PHONE_VERIFY_DEMO=1` for a hosted demo).
+Codes are generated and checked by the app (providers only deliver them): each lasts 10 minutes and allows 5 tries. A number can start 3 checks per 10 minutes, and one IP 10 per hour. The web form gets a 30-minute signed token that `/api/orders` and `/api/requests` require. On WhatsApp, the chat's own number counts as verified; a different number goes through the same check. Without providers, demo mode shows the code on screen (on in development; set `PHONE_VERIFY_DEMO=1` for a hosted demo). In production with neither a provider nor demo mode, no method is available and orders can't be placed.
 
 ## Accel back office (`/admin`)
 

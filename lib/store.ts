@@ -100,7 +100,7 @@ export interface LeadAction {
   updatedAt: number;
 }
 
-export type VerifyMethod = "whatsapp" | "missed_call";
+export type VerifyMethod = "sms" | "voice" | "whatsapp" | "missed_call";
 
 /** A pending or finished check that the owner really has the phone they gave us. */
 export interface PhoneVerification {
@@ -108,7 +108,7 @@ export interface PhoneVerification {
   /** Keyed hash of the 10-digit number: the number itself is not kept here. */
   phoneHash: string;
   method: VerifyMethod;
-  /** WhatsApp code, hashed. Missed-call checks have none. */
+  /** The code, hashed. Missed-call checks have none. */
   codeHash?: string;
   attempts: number;
   createdAt: number;

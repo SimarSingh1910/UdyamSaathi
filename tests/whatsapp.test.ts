@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { handleIncoming, onPhoneVerified, sessionKey, type Incoming } from "@/lib/whatsapp/bot";
 import { drainOutbox, type OutMessage } from "@/lib/whatsapp/client";
 import { parseWebhook, validSignature } from "@/lib/whatsapp/webhook";
@@ -11,6 +11,7 @@ import {
   recordMissedCall,
   startVerification,
   verificationIsFor,
+  verifyMethods,
 } from "@/lib/verify/phone";
 
 // No WhatsApp credentials, no LLM: the bot runs in demo mode on rules, which is
@@ -63,9 +64,11 @@ describe("WhatsApp journey", () => {
 
     expect(textOf(await tap(from, "phone:other"))).toContain("10-digit");
     expect(textOf(await type(from, "12345"))).toContain("valid 10-digit");
-    expect(optionIds(await type(from, "+91 98111 22233"))).toEqual(["verify:whatsapp", "verify:missed_call", "phone:own"]);
+    // SMS, voice call, WhatsApp and "this number": more than 3, so a list.
+    expect(optionIds(await type(from, "+91 98111 22233"))).toEqual(["verify:sms", "verify:voice", "verify:whatsapp", "phone:own"]);
 
-    const sent = textOf(await tap(from, "verify:whatsapp"));
+    const sent = textOf(await tap(from, "verify:sms"));
+    expect(sent).toContain("by SMS");
     const code = sent.match(/code is (\d{6})/)![1];
     const wrong = code === "000000" ? "111111" : "000000";
     expect(textOf(await type(from, wrong))).toContain("doesn't match");
@@ -81,14 +84,17 @@ describe("WhatsApp journey", () => {
   }, 60_000);
 
   it("carries on by itself when the missed call comes in", async () => {
+    // Missed calls are offered only when a number is set up.
+    process.env.MISSED_CALL_NUMBER = "080-4718-0000";
+    onTestFinished(() => void delete process.env.MISSED_CALL_NUMBER);
     const from = "919812300000";
     await throughKyc(from);
     await tap(from, "phone:other");
     await type(from, "9812311111");
 
     const ask = await tap(from, "verify:missed_call");
-    expect(textOf(ask)).toContain("missed call");
-    expect(optionIds(ask)).toContain("verify:simulate");
+    expect(textOf(ask)).toContain("080-4718-0000");
+    expect(optionIds(ask)).not.toContain("verify:simulate");
 
     // The provider's webhook reports the caller; the waiting chat places the order.
     const verified = await recordMissedCall("+91-98123-11111");
@@ -124,7 +130,7 @@ describe("phone verification", () => {
     // Even the right code is refused once the attempts are used up.
     expect(await checkCode(first.id, first.demoCode!)).toEqual({ ok: false, error: "too_many" });
 
-    await startVerification({ phone, method: "missed_call" });
+    await startVerification({ phone, method: "voice" });
     await startVerification({ phone, method: "whatsapp" });
     expect(await startVerification({ phone, method: "whatsapp" })).toEqual({ ok: false, error: "rate_limited" });
   });
@@ -185,5 +191,51 @@ describe("WhatsApp webhook", () => {
       { id: "c", from: "919876543210", profileName: "Ravi", media: { id: "m1", mime: "image/jpeg" }, text: undefined },
       { id: "d", from: "919876543210", profileName: "Ravi", media: { id: "m2", mime: "audio/ogg; codecs=opus" } },
     ]);
+  });
+});
+
+describe("2Factor delivery", () => {
+  function mock2Factor(reply: { Status: string; Details: string }) {
+    process.env.TWOFACTOR_API_KEY = "test-key";
+    const urls: string[] = [];
+    vi.stubGlobal("fetch", async (url: string) => {
+      urls.push(url);
+      return new Response(JSON.stringify(reply), { status: 200, headers: { "content-type": "application/json" } });
+    });
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+      delete process.env.TWOFACTOR_API_KEY;
+    });
+    return urls;
+  }
+
+  it("offers SMS only with a DLT template, since without one 2Factor calls instead", async () => {
+    mock2Factor({ Status: "Success", Details: "session-1" });
+    expect(verifyMethods()).toMatchObject({ sms: "off", voice: "live" });
+    expect(await startVerification({ phone: "9700000010", method: "sms" })).toEqual({ ok: false, error: "unavailable" });
+  });
+
+  it("sends our own code by SMS and by voice call, and checks it here", async () => {
+    const urls = mock2Factor({ Status: "Success", Details: "session-1" });
+    process.env.TWOFACTOR_SMS_TEMPLATE = "UdyamOTP";
+    onTestFinished(() => void delete process.env.TWOFACTOR_SMS_TEMPLATE);
+    expect(verifyMethods().sms).toBe("live");
+    const sms = await startVerification({ phone: "9700000011", method: "sms" });
+    if (!sms.ok) throw new Error(sms.error);
+    expect(sms.demo).toBe(false);
+    expect(sms.demoCode).toBeUndefined();
+    const [, code] = urls[0].match(/^https:\/\/2factor\.in\/API\/V1\/test-key\/SMS\/919700000011\/(\d{6})\/UdyamOTP$/)!;
+    expect(await checkCode(sms.id, code)).toMatchObject({ ok: true });
+
+    const voice = await startVerification({ phone: "9700000012", method: "voice" });
+    expect(voice.ok).toBe(true);
+    expect(urls[1]).toMatch(/\/VOICE\/919700000012\/\d{6}$/);
+  });
+
+  it("reports a refused send without counting it against the number", async () => {
+    mock2Factor({ Status: "Error", Details: "Invalid API Key" });
+    for (let i = 0; i < 4; i++) {
+      expect(await startVerification({ phone: "9700000013", method: "voice" })).toEqual({ ok: false, error: "send_failed" });
+    }
   });
 });

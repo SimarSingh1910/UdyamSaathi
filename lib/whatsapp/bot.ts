@@ -16,7 +16,7 @@ import { placeOrder } from "../orders";
 import { buildQuote } from "../quote";
 import { buildRecommendation, completeAnswers } from "../recommendation";
 import { keyedHash } from "../security/hash";
-import { createRequest, deleteWaSession, getOrder, getWaSession, saveWaSession } from "../store";
+import { createRequest, deleteWaSession, getOrder, getWaSession, saveWaSession, type VerifyMethod } from "../store";
 import { translate } from "../translate";
 import {
   checkCode,
@@ -311,7 +311,7 @@ async function reprompt(chat: Chat): Promise<void> {
     case "phone_method":
       return askMethod(chat);
     case "phone_code":
-      return chat.buttons(WA.codeSent, [["verify:change", WA.changeMethod]], { phone: fmtPhone(s.pendingPhone ?? "") });
+      return chat.buttons(WA.codeEnter, [["verify:change", WA.changeMethod]], { phone: fmtPhone(s.pendingPhone ?? "") });
     case "phone_missed":
       return waitingForCall(chat);
     case "done":
@@ -761,17 +761,31 @@ async function phoneEntered(chat: Chat, text: string): Promise<void> {
   return askMethod(chat);
 }
 
+const METHOD_ORDER: VerifyMethod[] = ["sms", "voice", "whatsapp", "missed_call"];
+const METHOD_COPY: Record<VerifyMethod, Text> = {
+  sms: WA.methodSms,
+  voice: WA.methodVoice,
+  whatsapp: WA.methodWhatsapp,
+  missed_call: WA.methodMissedCall,
+};
+const CODE_SENT: Record<Exclude<VerifyMethod, "missed_call">, Text> = {
+  sms: WA.codeSentSms,
+  voice: WA.codeSentVoice,
+  whatsapp: WA.codeSent,
+};
+
 async function askMethod(chat: Chat): Promise<void> {
   const s = chat.s;
   s.step = "phone_method";
   s.verificationId = undefined;
   const methods = verifyMethods();
-  const buttons: [string, Copy][] = [];
-  if (methods.whatsapp !== "off") buttons.push(["verify:whatsapp", WA.methodWhatsapp]);
-  if (methods.missed_call !== "off") buttons.push(["verify:missed_call", WA.methodMissedCall]);
-  if (ownPhone(s)) buttons.push(["phone:own", WA.thisNumber]);
-  if (!buttons.length) return chat.say(WA.verifyUnavailable);
-  return chat.buttons(WA.askMethod, buttons, { phone: fmtPhone(s.pendingPhone ?? "") });
+  const options: [string, Copy][] = METHOD_ORDER.filter((m) => methods[m] !== "off").map((m) => [`verify:${m}`, METHOD_COPY[m]]);
+  if (ownPhone(s)) options.push(["phone:own", WA.thisNumber]);
+  if (!options.length) return chat.say(WA.verifyUnavailable);
+  const prompt = await chat.t(WA.askMethod, { phone: fmtPhone(s.pendingPhone ?? "") });
+  // WhatsApp allows 3 buttons; with more choices, show a list.
+  if (options.length <= 3) return chat.buttons(prompt, options);
+  return chat.list(prompt, WA.methodsButton, options.map(([id, title]) => ({ id, title })));
 }
 
 async function phoneAction(chat: Chat, id: string): Promise<void> {
@@ -788,13 +802,12 @@ async function phoneAction(chat: Chat, id: string): Promise<void> {
     if (await simulateMissedCall(s.verificationId)) return phoneConfirmed(chat);
     return askMethod(chat);
   }
-  if (id === "verify:whatsapp" || id === "verify:missed_call") {
-    return startPhoneCheck(chat, id === "verify:whatsapp" ? "whatsapp" : "missed_call");
-  }
+  const method = METHOD_ORDER.find((m) => id === `verify:${m}`);
+  if (method) return startPhoneCheck(chat, method);
   return reprompt(chat);
 }
 
-async function startPhoneCheck(chat: Chat, method: "whatsapp" | "missed_call"): Promise<void> {
+async function startPhoneCheck(chat: Chat, method: VerifyMethod): Promise<void> {
   const s = chat.s;
   const phone = s.pendingPhone!;
   const r = await startVerification({ phone, method, waSession: s.key });
@@ -807,9 +820,9 @@ async function startPhoneCheck(chat: Chat, method: "whatsapp" | "missed_call"): 
   }
   s.verificationId = r.id;
   const vars = { phone: fmtPhone(phone), number: r.callNumber ?? "", code: r.demoCode ?? "" };
-  if (method === "whatsapp") {
+  if (method !== "missed_call") {
     s.step = "phone_code";
-    const text = [await chat.t(WA.codeSent, vars), ...(r.demoCode ? [await chat.t(WA.demoCode, vars)] : [])].join("\n\n");
+    const text = [await chat.t(CODE_SENT[method], vars), ...(r.demoCode ? [await chat.t(WA.demoCode, vars)] : [])].join("\n\n");
     return chat.buttons(text, [["verify:change", WA.changeMethod]]);
   }
   s.step = "phone_missed";

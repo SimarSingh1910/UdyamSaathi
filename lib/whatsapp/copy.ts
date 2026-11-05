@@ -116,12 +116,24 @@ export const WA = {
     en: "We need to confirm that {phone} is yours. How would you like to verify it?",
     hi: "हमें पक्का करना है कि {phone} आपका ही नंबर है। आप कैसे सत्यापित करना चाहेंगे?",
   },
+  methodSms: { en: "SMS code", hi: "SMS कोड" },
+  methodVoice: { en: "Code by call", hi: "कॉल पर कोड" },
   methodWhatsapp: { en: "WhatsApp code", hi: "WhatsApp कोड" },
+  methodsButton: { en: "Choose", hi: "चुनें" },
   methodMissedCall: { en: "Missed call", hi: "मिस्ड कॉल" },
   codeSent: {
     en: "We've sent a 6-digit code on WhatsApp to {phone}. Type it here.",
     hi: "हमने {phone} पर WhatsApp से 6 अंकों का कोड भेजा है। उसे यहाँ लिखें।",
   },
+  codeSentSms: {
+    en: "We've sent a 6-digit code by SMS to {phone}. If the SMS can't reach you, you'll get a call that reads it out instead. Type it here.",
+    hi: "हमने {phone} पर SMS से 6 अंकों का कोड भेजा है। SMS न पहुँचे तो एक कॉल कोड बोलकर बताएगी। उसे यहाँ लिखें।",
+  },
+  codeSentVoice: {
+    en: "You'll get a call on {phone} in a moment that reads out a 6-digit code. Type it here.",
+    hi: "थोड़ी देर में {phone} पर एक कॉल आएगी जो 6 अंकों का कोड बोलेगी। उसे यहाँ लिखें।",
+  },
+  codeEnter: { en: "Type the 6-digit code we sent to {phone}.", hi: "{phone} पर भेजा गया 6 अंकों का कोड यहाँ लिखें।" },
   demoCode: { en: "_Demo mode: no message was sent. The code is {code}._", hi: "_डेमो मोड: कोई मैसेज नहीं गया। कोड है {code}।_" },
   missedCallAsk: {
     en: "Give a missed call to *{number}* from {phone} within 10 minutes. It disconnects by itself and costs nothing. I'll message you here as soon as it comes through.",
@@ -146,8 +158,8 @@ export const WA = {
     hi: "यह तरीका अभी उपलब्ध नहीं है। दूसरा तरीका आज़माएं, या अपना WhatsApp नंबर दें।",
   },
   sendFailed: {
-    en: "We couldn't send a code to that number. Is it on WhatsApp? Try a missed call instead.",
-    hi: "उस नंबर पर कोड नहीं भेज पाए। क्या वह WhatsApp पर है? मिस्ड कॉल आज़माएं।",
+    en: "We couldn't send a code to that number. Please try another way.",
+    hi: "उस नंबर पर कोड नहीं भेज पाए। कृपया दूसरा तरीका आज़माएं।",
   },
   phoneVerified: { en: "✅ {phone} verified.", hi: "✅ {phone} सत्यापित हो गया।" },
 

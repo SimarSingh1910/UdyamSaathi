@@ -7,7 +7,8 @@ import { useI18n } from "./I18nProvider";
 const normalize = (phone: string) => phone.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, "");
 const valid = (phone: string) => /^[6-9]\d{9}$/.test(normalize(phone));
 
-type Method = "whatsapp" | "missed_call";
+type Method = "sms" | "voice" | "whatsapp" | "missed_call";
+const METHODS: Method[] = ["sms", "voice", "whatsapp", "missed_call"];
 type Mode = "live" | "demo" | "off";
 
 interface Check {
@@ -17,6 +18,19 @@ interface Check {
   demoCode?: string;
   demo: boolean;
 }
+
+const METHOD_LABEL: Record<Method, StringKey> = {
+  sms: "verifySms",
+  voice: "verifyVoice",
+  whatsapp: "verifyWhatsapp",
+  missed_call: "verifyMissedCall",
+};
+const METHOD_ICON: Record<Method, string> = { sms: "✉️", voice: "📞", whatsapp: "💬", missed_call: "📲" };
+const SENT_TO: Record<Exclude<Method, "missed_call">, StringKey> = {
+  sms: "codeSentSms",
+  voice: "codeSentVoice",
+  whatsapp: "codeSentTo",
+};
 
 const ERRORS: Record<string, StringKey> = {
   wrong_code: "wrongCode",
@@ -63,7 +77,7 @@ export default function ContactForm({ title, submitLabel, defaultName = "", busy
     fetch("/api/verify")
       .then((r) => r.json())
       .then((d) => setMethods(d.methods))
-      .catch(() => setMethods({ whatsapp: "off", missed_call: "off" }));
+      .catch(() => setMethods({ sms: "off", voice: "off", whatsapp: "off", missed_call: "off" }));
   }, []);
 
   function done(token: string) {
@@ -153,7 +167,7 @@ export default function ContactForm({ title, submitLabel, defaultName = "", busy
   );
 
   if (stage === "method") {
-    const offered = (["whatsapp", "missed_call"] as Method[]).filter((m) => methods?.[m] !== "off");
+    const offered = METHODS.filter((m) => methods?.[m] !== "off");
     return (
       <div className="card form">
         <b>{title}</b>
@@ -164,9 +178,15 @@ export default function ContactForm({ title, submitLabel, defaultName = "", busy
         <div className="row actions">
           {offered.map((m) => (
             <button key={m} type="button" className="btn" disabled={working} onClick={() => start(m)}>
-              {m === "whatsapp" ? `💬 ${t("verifyWhatsapp")}` : `📞 ${t("verifyMissedCall")}`}
+              {`${METHOD_ICON[m]} ${t(METHOD_LABEL[m])}`}
             </button>
           ))}
+          {/* SMS waits on DLT registration; show it so owners know it's on the way. */}
+          {methods && methods.sms === "off" && (
+            <button type="button" className="btn" disabled title={t("comingSoon")}>
+              {`${METHOD_ICON.sms} ${t("verifySms")} (${t("comingSoon")})`}
+            </button>
+          )}
         </div>
         {error && <p className="small fail">{t(error)}</p>}
         {back("details")}
@@ -174,7 +194,7 @@ export default function ContactForm({ title, submitLabel, defaultName = "", busy
     );
   }
 
-  if (stage === "verify" && check?.method === "whatsapp") {
+  if (stage === "verify" && check && check.method !== "missed_call") {
     return (
       <form
         className="card form"
@@ -185,7 +205,7 @@ export default function ContactForm({ title, submitLabel, defaultName = "", busy
       >
         <b>{title}</b>
         <p>
-          {t("codeSentTo")} <b>{shown}</b>
+          {t(SENT_TO[check.method])} <b>{shown}</b>
         </p>
         {check.demoCode && (
           <p className="small muted">
