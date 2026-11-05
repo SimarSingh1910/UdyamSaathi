@@ -4,6 +4,8 @@ import path from "node:path";
 import { parseProduct, type Product } from "./catalogue";
 import { loadDataset } from "./data";
 import type { LangCode } from "./languages";
+import { randomBytes } from "node:crypto";
+import { decryptStore, encryptStore, isEncryptedStore } from "./security/encryption";
 
 /**
  * Tiny persistent store for the prototype: one JSON file, read once and written
@@ -109,6 +111,7 @@ function storePath(): string {
 }
 
 let cache: StoreData | null = null;
+let phoneVault: Record<string, string> = {};
 
 function seed(): StoreData {
   return {
@@ -120,28 +123,111 @@ function seed(): StoreData {
   };
 }
 
+type DiskPayload = {
+  data: StoreData;
+  phoneVault: Record<string, string>;
+};
+
+function tokenise(data: StoreData): DiskPayload {
+  const copy = structuredClone(data);
+  const vault = { ...phoneVault };
+  const phoneToToken = new Map(
+    Object.entries(vault).map(([token, phone]) => [phone, token])
+  );
+
+  const protect = (phone: string) => {
+    let token = phoneToToken.get(phone);
+    if (!token) {
+      token = `ph_${randomBytes(24).toString("hex")}`;
+      vault[token] = phone;
+      phoneToToken.set(phone, token);
+    }
+    return token;
+  };
+
+  for (const order of copy.orders) {
+    order.contact.phone = protect(order.contact.phone);
+  }
+  for (const request of copy.requests) {
+    request.contact.phone = protect(request.contact.phone);
+  }
+
+  return { data: copy, phoneVault: vault };
+}
+
+function detokenise(payload: DiskPayload): StoreData {
+  phoneVault = payload.phoneVault ?? {};
+  const data = payload.data;
+  const restore = (phone: string) => phoneVault[phone] ?? phone;
+
+  for (const order of data.orders ?? []) {
+    order.contact.phone = restore(order.contact.phone);
+  }
+  for (const request of data.requests ?? []) {
+    request.contact.phone = restore(request.contact.phone);
+  }
+
+  return data;
+}
+
 function load(): StoreData {
   if (cache) return cache;
+
   const file = storePath();
+
   if (existsSync(file)) {
+    const raw = readFileSync(file, "utf8");
+
+    // Do not silently reset the database if its contents are invalid.
+    let parsed: unknown;
     try {
-      cache = JSON.parse(readFileSync(file, "utf8")) as StoreData;
-      return cache;
+      parsed = JSON.parse(raw);
     } catch {
-      /* corrupt file: start again from the seed */
+      throw new Error(
+        `The UdyamSaathi database at ${file} is not valid JSON. It has not been overwritten. Restore your backup before continuing.`
+      );
     }
+
+    if (isEncryptedStore(parsed)) {
+      const payload = decryptStore<DiskPayload>(parsed as {
+        iv: string; tag: string; data: string;
+      });
+      cache = detokenise(payload);
+      return cache;
+    }
+
+    // One-time migration from the previous plaintext JSON format.
+    cache = parsed as StoreData;
+    if (
+      !cache ||
+      cache.version !== 1 ||
+      !Array.isArray(cache.orders) ||
+      !Array.isArray(cache.requests)
+    ) {
+      cache = null;
+      throw new Error("Unrecognised database format. Original file preserved.");
+    }
+
+    persist();
+    return cache;
   }
+
   cache = seed();
   persist();
   return cache;
 }
 
 function persist() {
+  if (!cache) throw new Error("Cannot save an unloaded database.");
+
   const file = storePath();
   mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(cache, null, 1));
+  const payload = tokenise(cache);
+
+  writeFileSync(tmp, encryptStore(payload), { mode: 0o600 });
   renameSync(tmp, file);
+  phoneVault = payload.phoneVault;
 }
 
 /** Run a change against the store and save it. */
@@ -155,6 +241,7 @@ function mutate<T>(fn: (data: StoreData) => T): T {
 /** Forget the in-memory copy (tests). */
 export function resetStoreCache() {
   cache = null;
+  phoneVault = {};
 }
 
 // ---- Products -----------------------------------------------------------
