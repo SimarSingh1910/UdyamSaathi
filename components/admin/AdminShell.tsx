@@ -23,21 +23,34 @@ export async function api<T = unknown>(url: string, init?: { method?: string; bo
 
 const NAV = [
   { href: "/admin", label: "Orders" },
-  { href: "/admin/leads", label: "Leads & requests" },
+  { href: "/admin/leads", label: "Leads & requests", badge: true },
   { href: "/admin/services", label: "Services" },
 ];
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<"checking" | "in" | "out">("checking");
+  const [openRequests, setOpenRequests] = useState(0);
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
   const path = usePathname();
 
   useEffect(() => {
-    fetch("/api/admin/stats", { cache: "no-store" }).then((r) => setState(r.ok ? "in" : "out"));
+    // The stats call doubles as the sign-in check and feeds the help-request badge.
+    const check = () =>
+      fetch("/api/admin/stats", { cache: "no-store" })
+        .then(async (r) => {
+          setState(r.ok ? "in" : "out");
+          if (r.ok) setOpenRequests((await r.json()).live?.openRequests ?? 0);
+        })
+        .catch(() => {});
+    check();
+    const t = setInterval(check, 15_000);
     const out = () => setState("out");
     window.addEventListener("uds-admin-logout", out);
-    return () => window.removeEventListener("uds-admin-logout", out);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("uds-admin-logout", out);
+    };
   }, []);
 
   if (state === "checking") return <div className="admin" />;
@@ -46,7 +59,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     return (
       <div className="admin admin-login">
         <form
-          className="card"
+          className="ad-card"
           onSubmit={async (e) => {
             e.preventDefault();
             setError("");
@@ -59,18 +72,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             else setError("Wrong passcode");
           }}
         >
-          <span className="badge">Accel Business</span>
+          <span className="ad-brand">UdyamSaathi</span>
           <h1>Back office</h1>
-          <Link href="/" className="home-link">
-            ← Demo home
-          </Link>
           <p className="muted small">For Accel staff and partners only.</p>
           <label className="form">
             Passcode
             <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} autoFocus />
           </label>
           {error && <p className="small fail">{error}</p>}
-          <button className="btn">Sign in</button>
+          <button className="ad-btn ad-btn-primary">Sign in</button>
+          <Link href="/" className="ad-quiet">
+            ← Demo home
+          </Link>
         </form>
       </div>
     );
@@ -78,21 +91,25 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="admin">
-      <header className="admin-bar">
-        <Link href="/admin" className="brand">
-          UdyamSaathi <span className="muted small">· Accel back office</span>
-        </Link>
-        <nav>
-          <Link href="/" className="home-link">
-            ← Demo home
+      <header className="ad-top">
+        <div className="ad-wrap ad-top-row">
+          <Link href="/admin" className="ad-brand">
+            UdyamSaathi
           </Link>
-          {NAV.map((n) => (
-            <Link key={n.href} href={n.href} className={path === n.href ? "on" : ""}>
-              {n.label}
-            </Link>
-          ))}
+          <span className="ad-sub">Accel back office</span>
+          <nav className="ad-nav">
+            {NAV.map((n) => (
+              <Link key={n.href} href={n.href} className={path === n.href ? "on" : ""}>
+                {n.label}
+                {n.badge && openRequests > 0 && <span className="ad-count ad-count-amber">{openRequests}</span>}
+              </Link>
+            ))}
+          </nav>
+          <Link href="/" className="ad-quiet ad-push">
+            Demo home
+          </Link>
           <button
-            className="btn btn-ghost btn-small"
+            className="ad-btn"
             onClick={async () => {
               await fetch("/api/admin/logout", { method: "POST" });
               setState("out");
@@ -100,9 +117,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           >
             Sign out
           </button>
-        </nav>
+        </div>
       </header>
-      {children}
+      <div className="ad-wrap ad-main">{children}</div>
     </div>
   );
 }

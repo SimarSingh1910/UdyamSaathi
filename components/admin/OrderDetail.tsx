@@ -6,6 +6,7 @@ import { formatInr } from "@/lib/i18n";
 import { LINE_LABEL, STATUS_FLOW, STATUS_LABEL, isOpen } from "@/lib/order-flow";
 import type { LineStatus, Order } from "@/lib/store";
 import { api } from "./AdminShell";
+import Select from "./Select";
 
 const tomorrow = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 
@@ -84,17 +85,14 @@ export default function OrderDetail({ id }: { id: string }) {
                     {formatInr(l.monthly)}/month · usually {l.installDays} day(s) to install
                   </div>
                 </span>
-                <select
+                <Select
                   value={l.status}
+                  neutral={null}
                   disabled={!open}
-                  onChange={(e) => act({ action: "line", productId: l.productId, status: e.target.value as LineStatus })}
-                >
-                  {(Object.keys(LINE_LABEL) as LineStatus[]).map((s) => (
-                    <option key={s} value={s}>
-                      {LINE_LABEL[s].en}
-                    </option>
-                  ))}
-                </select>
+                  label={`${l.name} status`}
+                  onChange={(v) => act({ action: "line", productId: l.productId, status: v as LineStatus })}
+                  options={(Object.keys(LINE_LABEL) as LineStatus[]).map((s) => ({ value: s, label: LINE_LABEL[s].en }))}
+                />
               </div>
             ))}
             <p className="small muted">

@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const key = q.get("sort") === "value" ? "expectedMonthly" : "probability";
   leads = [...leads].sort((a, b) => b[key] - a[key]);
 
-  const limit = Math.min(200, Math.max(1, Number(q.get("limit")) || 50));
+  const limit = Math.min(1000, Math.max(1, Number(q.get("limit")) || 50));
   const offset = Math.max(0, Number(q.get("offset")) || 0);
 
   const all = await scoredLeads();
