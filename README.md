@@ -2,7 +2,7 @@
 
 **[Open UdyamSaathi →](https://udyam-saathi-henna.vercel.app/)**
 
-Deployed on Render. Explore the Advisor, Quote and Smart KYC onboarding experience.
+Deployed on Vercel. Explore the Advisor, Quote and Smart KYC onboarding experience.
 
 ## 👥 Team Outliers
 
