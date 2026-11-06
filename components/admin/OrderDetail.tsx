@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatInr } from "@/lib/i18n";
 import { LINE_LABEL, STATUS_FLOW, STATUS_LABEL, isOpen } from "@/lib/order-flow";
 import type { LineStatus, Order } from "@/lib/store";
@@ -18,6 +18,8 @@ export default function OrderDetail({ id }: { id: string }) {
   const [engineerId, setEngineerId] = useState("");
   const [note, setNote] = useState("");
   const [phone, setPhone] = useState<string | null>(null);
+  const [saving, setSaving] = useState(0);
+  const saveSeq = useRef(0);
 
   const load = useCallback(() => api<Order>(`/api/admin/orders/${id}`).then(setOrder), [id]);
   useEffect(() => {
@@ -33,12 +35,26 @@ export default function OrderDetail({ id }: { id: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [booked]);
 
-  async function act(body: Record<string, unknown>) {
+  /**
+   * Saves a change. With `preview`, the screen shows the change at once and the save
+   * runs behind it (a hosted database can take a second or two); if the save fails,
+   * the order goes back to how it was. Only the latest save's answer is applied, so
+   * quick successive changes don't flicker back to an older state.
+   */
+  async function act(body: Record<string, unknown>, preview?: (o: Order) => Order) {
     setError("");
+    const before = order;
+    const seq = ++saveSeq.current;
+    if (preview && before) setOrder(preview(before));
+    setSaving((n) => n + 1);
     try {
-      setOrder(await api<Order>(`/api/admin/orders/${id}`, { method: "PATCH", body }));
+      const saved = await api<Order>(`/api/admin/orders/${id}`, { method: "PATCH", body });
+      if (seq === saveSeq.current) setOrder(saved);
     } catch (e) {
+      if (seq === saveSeq.current && before) setOrder(before);
       setError((e as Error).message);
+    } finally {
+      setSaving((n) => n - 1);
     }
   }
 
@@ -61,7 +77,10 @@ export default function OrderDetail({ id }: { id: string }) {
             {order.business.gstinMasked && ` · GSTIN ${order.business.gstinMasked}`}
           </p>
         </div>
-        <span className={`pill big status-${order.status}`}>{STATUS_LABEL[order.status].en}</span>
+        <span>
+          {saving > 0 && <span className="muted small">Saving… </span>}
+          <span className={`pill big status-${order.status}`}>{STATUS_LABEL[order.status].en}</span>
+        </span>
       </div>
 
       {error && <p className="card warn-card small">{error}</p>}
@@ -76,7 +95,7 @@ export default function OrderDetail({ id }: { id: string }) {
                   key={s}
                   className={`stepbtn${i <= idx ? " done" : ""}`}
                   disabled={!open || i <= idx}
-                  onClick={() => act({ action: "status", status: s })}
+                  onClick={() => act({ action: "status", status: s }, (o) => ({ ...o, status: s }))}
                   title={i > idx ? `Move to ${STATUS_LABEL[s].en}` : ""}
                 >
                   {STATUS_LABEL[s].en}
@@ -100,7 +119,12 @@ export default function OrderDetail({ id }: { id: string }) {
                   neutral={null}
                   disabled={!open}
                   label={`${l.name} status`}
-                  onChange={(v) => act({ action: "line", productId: l.productId, status: v as LineStatus })}
+                  onChange={(v) =>
+                    act({ action: "line", productId: l.productId, status: v as LineStatus }, (o) => ({
+                      ...o,
+                      lines: o.lines.map((x) => (x.productId === l.productId ? { ...x, status: v as LineStatus } : x)),
+                    }))
+                  }
                   options={(Object.keys(LINE_LABEL) as LineStatus[]).map((s) => ({ value: s, label: LINE_LABEL[s].en }))}
                 />
               </div>
