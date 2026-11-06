@@ -10,6 +10,9 @@ import { leadActionToRow, orderToRow, productFromRow, requestToRow } from "./row
 import { appMeta, helpRequests, leadActions, orders, products } from "./schema";
 
 const DAY = 24 * 60 * 60_000;
+// Bump the version when sample data is added, so already-seeded databases get the
+// new rows too (every insert skips rows that already exist).
+const DEMO_SEED_KEY = "demo-seeded-v2";
 
 interface SampleOrder {
   id: string;
@@ -29,8 +32,10 @@ interface SampleOrder {
   engineer?: string;
 }
 
-// One order at each stage (two at the busy ones), across segments, cities and channels.
+// Ten orders: every stage (two at the busy ones), across segments, cities and channels.
 const SAMPLE_ORDERS: SampleOrder[] = [
+  { id: "UDS-100109", daysAgo: 0.02, status: "placed", tradeName: "Om Sai Hardware", businessType: "Hardware store", city: "Nagpur", cityTier: 2, employees: 3, sites: 1, gstin: true, contact: ["Prakash Deshmukh", "9000000109"], lang: "mr", channel: "whatsapp", items: [["P04", 1], ["P07", 2], ["P19", 1]] },
+  { id: "UDS-100110", daysAgo: 0.05, status: "placed", tradeName: "Rathi Logistics", businessType: "Transport company", city: "Indore", cityTier: 2, employees: 18, sites: 2, gstin: true, contact: ["Ankit Rathi", "9000000110"], lang: "hi", channel: "web", items: [["P01", 2], ["P25", 6], ["P08", 4]] },
   { id: "UDS-100101", daysAgo: 0.1, status: "kyc_verified", tradeName: "Shree Ganesh Kirana", businessType: "Kirana store", city: "Pune", cityTier: 1, employees: 2, sites: 1, gstin: false, contact: ["Ramesh Patil", "9000000101"], lang: "mr", channel: "whatsapp", items: [["P01", 1], ["P19", 1], ["P07", 1]] },
   { id: "UDS-100102", daysAgo: 0.6, status: "kyc_verified", tradeName: "Smile Care Dental", businessType: "Dental clinic", city: "Kochi", cityTier: 2, employees: 6, sites: 1, gstin: true, contact: ["Dr. Anjali Menon", "9000000102"], lang: "en", channel: "web", items: [["P02", 1], ["P12", 1], ["P16", 6]] },
   { id: "UDS-100103", daysAgo: 1.5, status: "scheduled", tradeName: "Annapurna Sweets", businessType: "Sweet shop", city: "Jaipur", cityTier: 2, employees: 4, sites: 1, gstin: true, contact: ["Suresh Agarwal", "9000000103"], lang: "hi", channel: "web", items: [["P01", 1], ["P23", 1], ["P19", 1]], engineer: "Vikram Singh" },
@@ -128,7 +133,7 @@ export async function seedDemoOnce(db: Db): Promise<void> {
   const added = await db.transaction(async (tx) => {
     const claimed = await tx
       .insert(appMeta)
-      .values({ key: "demo-seeded", value: "in progress", updatedAt: new Date() })
+      .values({ key: DEMO_SEED_KEY, value: "in progress", updatedAt: new Date() })
       .onConflictDoNothing()
       .returning();
     if (!claimed.length) return null;
@@ -144,7 +149,7 @@ export async function seedDemoOnce(db: Db): Promise<void> {
     const actions = sampleLeadActions(now);
     if (actions.length) await tx.insert(leadActions).values(actions.map(([id, a]) => leadActionToRow(id, a))).onConflictDoNothing();
 
-    await tx.update(appMeta).set({ value: `${sample.length} orders`, updatedAt: new Date() }).where(eq(appMeta.key, "demo-seeded"));
+    await tx.update(appMeta).set({ value: `${sample.length} orders`, updatedAt: new Date() }).where(eq(appMeta.key, DEMO_SEED_KEY));
     return sample.length;
   });
   if (added !== null) console.info(`[db] demo site: added ${added} sample orders, ${SAMPLE_REQUESTS.length} help requests and lead follow-ups`);

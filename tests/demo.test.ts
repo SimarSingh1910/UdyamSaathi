@@ -10,9 +10,9 @@ describe("demo site sample data", () => {
     await seedDemoOnce(await getDb());
 
     const sample = (await listOrders()).filter((o) => o.id.startsWith("UDS-1001"));
-    expect(sample).toHaveLength(8);
+    expect(sample).toHaveLength(10);
     expect(new Set(sample.map((o) => o.status))).toEqual(
-      new Set(["kyc_verified", "scheduled", "installing", "active", "cancelled"]),
+      new Set(["placed", "kyc_verified", "scheduled", "installing", "active", "cancelled"]),
     );
     for (const o of sample) {
       expect(o.lines.length).toBeGreaterThan(0);

@@ -24,7 +24,9 @@ export async function sendTwoFactorOtp(channel: TwoFactorChannel, phone: string,
   const key = apiKey();
   if (!key) return false;
   const template = channel === "SMS" ? smsTemplate() : "";
-  const parts = [key, channel, `91${phone}`, code, ...(template ? [template] : [])].map(encodeURIComponent);
+  // 2Factor wants the bare 10-digit Indian number; with a 91 prefix it answers
+  // "Invalid Phone Number - Length Mismatch(Expected: 10)".
+  const parts = [key, channel, phone, code, ...(template ? [template] : [])].map(encodeURIComponent);
   try {
     const res = await fetch(`https://2factor.in/API/V1/${parts.join("/")}`, { signal: AbortSignal.timeout(15_000) });
     const body = (await res.json().catch(() => null)) as { Status?: string; Details?: string } | null;

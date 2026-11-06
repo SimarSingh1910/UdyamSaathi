@@ -121,7 +121,7 @@ describe("WhatsApp journey", () => {
 });
 
 describe("phone verification", () => {
-  it("limits attempts per code and starts per number", async () => {
+  it("limits attempts per code but not starts per number", async () => {
     const phone = "9700000001";
     const first = await startVerification({ phone, method: "whatsapp" });
     if (!first.ok) throw new Error(first.error);
@@ -132,7 +132,7 @@ describe("phone verification", () => {
 
     await startVerification({ phone, method: "voice" });
     await startVerification({ phone, method: "whatsapp" });
-    expect(await startVerification({ phone, method: "whatsapp" })).toEqual({ ok: false, error: "rate_limited" });
+    expect((await startVerification({ phone, method: "whatsapp" })).ok).toBe(true);
   });
 
   it("ties a check and its token to one number", async () => {
@@ -224,12 +224,12 @@ describe("2Factor delivery", () => {
     if (!sms.ok) throw new Error(sms.error);
     expect(sms.demo).toBe(false);
     expect(sms.demoCode).toBeUndefined();
-    const [, code] = urls[0].match(/^https:\/\/2factor\.in\/API\/V1\/test-key\/SMS\/919700000011\/(\d{6})\/UdyamOTP$/)!;
+    const [, code] = urls[0].match(/^https:\/\/2factor\.in\/API\/V1\/test-key\/SMS\/9700000011\/(\d{6})\/UdyamOTP$/)!;
     expect(await checkCode(sms.id, code)).toMatchObject({ ok: true });
 
     const voice = await startVerification({ phone: "9700000012", method: "voice" });
     expect(voice.ok).toBe(true);
-    expect(urls[1]).toMatch(/\/VOICE\/919700000012\/\d{6}$/);
+    expect(urls[1]).toMatch(/\/VOICE\/9700000012\/\d{6}$/);
   });
 
   it("accepts the fixed demo code next to the real one, on a demo site only", async () => {

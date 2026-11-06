@@ -25,8 +25,6 @@ import { sendTwoFactorOtp, twoFactorLive, twoFactorSmsLive } from "./twofactor";
 
 export const CHECK_TTL_MS = 10 * 60_000;
 const MAX_ATTEMPTS = 5;
-/** Checks one number can start in the rate-limit window. */
-const MAX_STARTS = 3;
 /** A verified number is good for placing the order for this long. */
 const TOKEN_TTL_MS = 30 * 60_000;
 
@@ -88,9 +86,8 @@ export async function startVerification(args: {
   const mode = verifyMethods()[args.method];
   if (mode === "off") return { ok: false, error: "unavailable" };
 
+  // Prototype: no limit on how many checks a number can start.
   const hash = phoneHash(phone);
-  const recent = await recentVerifications(hash, Date.now() - CHECK_TTL_MS);
-  if (recent.length >= MAX_STARTS) return { ok: false, error: "rate_limited" };
 
   const now = Date.now();
   const v: PhoneVerification = {
