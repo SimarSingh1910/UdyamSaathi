@@ -65,7 +65,7 @@ export default function OrdersDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [filter, setFilter] = useState<Filter>("open");
-  const [sort, setSort] = useState<Sort>("oldest");
+  const [sort, setSort] = useState<Sort>("newest");
   const [q, setQ] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -213,7 +213,7 @@ export default function OrdersDashboard() {
             Sort
             <Select
               value={sort}
-              neutral="oldest"
+              neutral="newest"
               label="Sort"
               onChange={(v) => setSort(v as Sort)}
               options={[
