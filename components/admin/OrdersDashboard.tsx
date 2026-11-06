@@ -71,7 +71,7 @@ export default function OrdersDashboard() {
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [o, s] = await Promise.all([api<{ orders: Order[] }>("/api/admin/orders"), api<Stats>("/api/admin/stats")]);
+    const [o, s] = await Promise.all([api<{ orders: Order[] }>("/api/admin/orders"), api<Stats>("/api/admin/overview")]);
     setOrders(o.orders);
     setStats(s);
   }, []);

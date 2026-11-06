@@ -35,14 +35,17 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const path = usePathname();
 
   useEffect(() => {
-    // The stats call doubles as the sign-in check and feeds the help-request badge.
+    // The overview call doubles as the sign-in check and feeds the help-request badge.
+    // (Not called "stats": ad blockers block URLs with /stats, which left a blank page.)
     const check = () =>
-      fetch("/api/admin/stats", { cache: "no-store" })
+      fetch("/api/admin/overview", { cache: "no-store" })
         .then(async (r) => {
           setState(r.ok ? "in" : "out");
           if (r.ok) setOpenRequests((await r.json()).live?.openRequests ?? 0);
         })
-        .catch(() => {});
+        // If the very first check fails (offline, blocked), show the sign-in form rather
+        // than a blank page; a later failed check doesn't sign anyone out.
+        .catch(() => setState((s) => (s === "checking" ? "out" : s)));
     check();
     const t = setInterval(check, 15_000);
     const out = () => setState("out");
